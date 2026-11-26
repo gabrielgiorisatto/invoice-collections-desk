@@ -1,4 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  Alert,
+  Card,
+  Col,
+  Descriptions,
+  Empty,
+  Layout,
+  Row,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import {
   demoDay,
   disputeStatus,
@@ -14,21 +29,36 @@ import {
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 
+const { Header, Content } = Layout
+const { Title, Text, Paragraph } = Typography
+
 function money(amount: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
-function tierClass(tier: PriorityTier) {
+function tierColor(tier: PriorityTier): string {
   switch (tier) {
-    case 'P0': return 'chip p0'
-    case 'P1': return 'chip p1'
-    case 'P2': return 'chip p2'
-    case 'P3': return 'chip p3'
+    case 'P0':
+      return 'gold'
+    case 'P1':
+      return 'blue'
+    case 'P2':
+      return 'default'
+    case 'P3':
+      return 'green'
     default: {
       const _exhaustive: never = tier
       return _exhaustive
     }
   }
+}
+
+function TierTag({ tier }: { tier: PriorityTier }) {
+  return <Tag color={tierColor(tier)}>{tier}</Tag>
 }
 
 export default function DeskPage() {
@@ -48,172 +78,257 @@ export default function DeskPage() {
       .catch(err => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Load failed')
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [])
+
+  const picks = useMemo(() => (invoices ? todaysThree(invoices) : []), [invoices])
+  const queue = useMemo(() => {
+    if (!invoices) return []
+    const order = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
+    return [...invoices].sort(
+      (a, b) =>
+        order[priorityTier(a)] - order[priorityTier(b)]
+        || remaining(b) - remaining(a)
+        || overdueDays(b) - overdueDays(a),
+    )
+  }, [invoices])
+  const selected = invoices?.find(item => item.id === selectedId) ?? null
+
+  const columns: ColumnsType<Invoice> = [
+    {
+      title: 'Invoice',
+      dataIndex: 'code',
+      key: 'code',
+      render: (code: string, row) => (
+        <Space direction="vertical" size={0}>
+          <Text strong>{code}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>{row.customer}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Remaining',
+      key: 'remaining',
+      align: 'right',
+      render: (_: unknown, row) => money(remaining(row)),
+    },
+    {
+      title: 'Overdue',
+      key: 'overdue',
+      render: (_: unknown, row) => `${overdueDays(row)}d`,
+    },
+    {
+      title: 'Tier',
+      key: 'tier',
+      render: (_: unknown, row) => <TierTag tier={priorityTier(row)} />,
+    },
+  ]
 
   if (error) {
     return (
-      <main className="shell py-16">
-        <p role="alert" className="text-danger font-semibold">{error}</p>
-      </main>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Content style={{ padding: 48, maxWidth: 960, margin: '0 auto' }}>
+          <Alert type="error" showIcon message={error} />
+        </Content>
+      </Layout>
     )
   }
 
   if (!invoices) {
     return (
-      <main className="shell py-16">
-        <p className="text-muted">Loading morning desk…</p>
-      </main>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Content style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
+          <Spin size="large" tip="Loading morning desk…" />
+        </Content>
+      </Layout>
     )
   }
 
-  const picks = todaysThree(invoices)
-  const queue = [...invoices].sort((a, b) => {
-    const order = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
-    return order[priorityTier(a)] - order[priorityTier(b)]
-      || remaining(b) - remaining(a)
-      || overdueDays(b) - overdueDays(a)
-  })
-  const selected = invoices.find(item => item.id === selectedId) ?? null
-
   return (
-    <>
-      <header className="topbar">
-        <div className="shell flex min-h-16 flex-wrap items-center justify-between gap-3 py-3">
-          <div>
-            <p className="eyebrow">Finance operations</p>
-            <h1 className="brand">Invoice Collections Desk</h1>
-          </div>
-          <p className="text-sm font-medium text-muted">Demo day {demoDay} · Morning capacity {morningCapacity}</p>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          borderBottom: '1px solid #c5d0c9',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+        }}
+      >
+        <div>
+          <Text type="secondary" style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block' }}>
+            Finance operations
+          </Text>
+          <Title level={3} style={{ margin: 0, color: '#14231c' }}>
+            Invoice Collections Desk
+          </Title>
         </div>
-      </header>
+        <Text type="secondary">
+          Demo day {demoDay} · Morning capacity {morningCapacity}
+        </Text>
+      </Header>
 
-      <main className="shell grid gap-6 py-8">
-        <section aria-labelledby="todays-three" className="panel p-5 sm:p-6">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <p className="eyebrow">This morning</p>
-              <h2 id="todays-three" className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-                Today’s {morningCapacity}
-              </h2>
-              <p className="mt-1 max-w-2xl text-muted">
-                Explainable priority tiers — not scores. Work these follow-ups first.
-              </p>
-            </div>
-            <p className="text-sm font-semibold text-brand">{picks.length} of {morningCapacity} slots</p>
-          </div>
-          {picks.length === 0 ? (
-            <p className="rounded-lg bg-brand-soft px-4 py-3 font-medium text-brand">No morning follow-ups. Queue is clear or waiting.</p>
-          ) : (
-            <ul className="grid gap-3 sm:grid-cols-3">
-              {picks.map(invoice => {
-                const explanation = explainPriority(invoice)
-                return (
-                  <li key={invoice.id}>
-                    <button
-                      type="button"
-                      className="pick w-full rounded-lg"
-                      aria-current={selectedId === invoice.id}
-                      onClick={() => setSelectedId(invoice.id)}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-display text-lg font-bold text-ink">{invoice.code}</span>
-                        <span className={tierClass(explanation.tier)}>{explanation.tier}</span>
-                      </div>
-                      <p className="text-sm font-semibold text-ink">{money(remaining(invoice))} remaining</p>
-                      <p className="text-sm text-muted">{explanation.reason}</p>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
-
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.2fr)]">
-          <section aria-labelledby="queue-heading" className="panel overflow-hidden">
-            <div className="border-b border-border px-4 py-4 sm:px-5">
-              <h2 id="queue-heading" className="font-display text-xl font-bold">Queue</h2>
-              <p className="mt-1 text-sm text-muted">All invoices with priority tiers. Read-only in this slice.</p>
-            </div>
-            <ul className="divide-y divide-border" role="list">
-              {queue.map(invoice => {
-                const tier = priorityTier(invoice)
-                return (
-                  <li key={invoice.id}>
-                    <button
-                      type="button"
-                      className="queue-row"
-                      aria-current={selectedId === invoice.id}
-                      onClick={() => setSelectedId(invoice.id)}
-                    >
-                      <span className="grid size-9 place-items-center rounded-md bg-[#e7eee9] text-sm font-bold text-brand">
-                        {invoice.code.slice(0, 1)}
-                      </span>
-                      <span className="grid text-left">
-                        <span className="font-semibold">{invoice.code} · {invoice.customer}</span>
-                        <span className="text-sm text-muted">{overdueDays(invoice)}d overdue · {money(remaining(invoice))}</span>
-                      </span>
-                      <span className={tierClass(tier)}>{tier}</span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-
-          <section aria-labelledby="detail-heading" className="panel detail p-5 sm:p-6">
-            {selected ? (
-              <>
-                <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-                  <div>
-                    <p className="eyebrow">Invoice</p>
-                    <h2 id="detail-heading" className="font-display text-3xl font-bold tracking-tight">{selected.code}</h2>
-                    <p className="mt-1 text-muted">{selected.customer}</p>
-                  </div>
-                  <span className={tierClass(priorityTier(selected))}>{priorityTier(selected)}</span>
-                </div>
-                <p className="mb-4 max-w-xl text-ink">{explainPriority(selected).reason}</p>
-                <dl className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <dt>Remaining</dt>
-                    <dd>{money(remaining(selected))} <span className="font-normal text-muted">of {money(selected.amount)}</span></dd>
-                  </div>
-                  <div>
-                    <dt>Overdue</dt>
-                    <dd>{overdueDays(selected)} days</dd>
-                  </div>
-                  <div>
-                    <dt>Promise</dt>
-                    <dd>{promiseStatus(selected)}</dd>
-                  </div>
-                  <div>
-                    <dt>Dispute</dt>
-                    <dd>{disputeStatus(selected)}</dd>
-                  </div>
-                  <div>
-                    <dt>Invoice accuracy</dt>
-                    <dd>{selected.invoiceAccuracy}</dd>
-                  </div>
-                  <div>
-                    <dt>Account manager</dt>
-                    <dd>{selected.accountManager}</dd>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <dt>Follow-ups</dt>
-                    <dd>{selected.followUps.length === 0 ? 'None recorded' : `${selected.followUps.length} on file`}</dd>
-                  </div>
-                </dl>
-                <p className="mt-5 rounded-lg border border-dashed border-border px-3 py-3 text-sm text-muted">
-                  Actions (follow-up, promise, payment, resolve) land in later tickets. This slice is read-only.
-                </p>
-              </>
+      <Content style={{ padding: '24px 24px 48px', maxWidth: 1180, width: '100%', margin: '0 auto' }}>
+        <Space direction="vertical" size={24} style={{ width: '100%' }}>
+          <Card
+            title={
+              <Space direction="vertical" size={0}>
+                <Text type="secondary" style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  This morning
+                </Text>
+                <span>Today’s {morningCapacity}</span>
+              </Space>
+            }
+            extra={
+              <Text strong style={{ color: '#1f5c45' }}>
+                {picks.length} of {morningCapacity} slots
+              </Text>
+            }
+          >
+            <Paragraph type="secondary" style={{ marginTop: 0 }}>
+              Explainable priority tiers — not scores. Work these follow-ups first.
+            </Paragraph>
+            {picks.length === 0 ? (
+              <Empty description="No morning follow-ups. Queue is clear or waiting." />
             ) : (
-              <p className="text-muted">Select an invoice from Today’s 3 or the queue.</p>
+              <Row gutter={[16, 16]}>
+                {picks.map(invoice => {
+                  const explanation = explainPriority(invoice)
+                  const active = selectedId === invoice.id
+                  return (
+                    <Col xs={24} md={8} key={invoice.id}>
+                      <Card
+                        size="small"
+                        hoverable
+                        onClick={() => setSelectedId(invoice.id)}
+                        styles={{
+                          body: {
+                            cursor: 'pointer',
+                            border: active ? '1px solid #1f5c45' : '1px solid transparent',
+                            background: active ? '#f3f8f5' : undefined,
+                          },
+                        }}
+                        aria-current={active ? 'true' : undefined}
+                      >
+                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                          <Title level={4} style={{ margin: 0 }}>{invoice.code}</Title>
+                          <TierTag tier={explanation.tier} />
+                        </Space>
+                        <Text strong style={{ display: 'block', marginTop: 8 }}>
+                          {money(remaining(invoice))} remaining
+                        </Text>
+                        <Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 8 }}>
+                          {explanation.reason}
+                        </Paragraph>
+                      </Card>
+                    </Col>
+                  )
+                })}
+              </Row>
             )}
-          </section>
-        </div>
-      </main>
-    </>
+          </Card>
+
+          <Row gutter={[16, 16]} align="stretch">
+            <Col xs={24} lg={10}>
+              <Card title="Queue" extra={<Text type="secondary">Read-only in this slice</Text>}>
+                <Table
+                  rowKey="id"
+                  size="middle"
+                  pagination={false}
+                  dataSource={queue}
+                  columns={columns}
+                  onRow={record => ({
+                    onClick: () => setSelectedId(record.id),
+                    style: {
+                      cursor: 'pointer',
+                      background: record.id === selectedId ? '#f3f8f5' : undefined,
+                    },
+                  })}
+                  locale={{ emptyText: <Empty description="No invoices in queue" /> }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} lg={14}>
+              <Card
+                title={selected ? `Invoice ${selected.code}` : 'Invoice detail'}
+                extra={selected ? <TierTag tier={priorityTier(selected)} /> : null}
+              >
+                {selected ? (
+                  <Space direction="vertical" size={16} style={{ width: '100%' }}>
+                    <div>
+                      <Title level={3} style={{ margin: 0 }}>{selected.code}</Title>
+                      <Text type="secondary">{selected.customer}</Text>
+                    </div>
+                    <Alert
+                      type="info"
+                      showIcon
+                      message={explainPriority(selected).reason}
+                      style={{ background: '#f3f8f5', borderColor: '#c5d0c9' }}
+                    />
+                    <Descriptions
+                      bordered
+                      size="small"
+                      column={{ xs: 1, sm: 2 }}
+                      items={[
+                        {
+                          key: 'remaining',
+                          label: 'Remaining',
+                          children: `${money(remaining(selected))} of ${money(selected.amount)}`,
+                        },
+                        {
+                          key: 'overdue',
+                          label: 'Overdue',
+                          children: `${overdueDays(selected)} days`,
+                        },
+                        {
+                          key: 'promise',
+                          label: 'Promise',
+                          children: promiseStatus(selected),
+                        },
+                        {
+                          key: 'dispute',
+                          label: 'Dispute',
+                          children: disputeStatus(selected),
+                        },
+                        {
+                          key: 'accuracy',
+                          label: 'Invoice accuracy',
+                          children: selected.invoiceAccuracy,
+                        },
+                        {
+                          key: 'am',
+                          label: 'Account manager',
+                          children: selected.accountManager,
+                        },
+                        {
+                          key: 'followups',
+                          label: 'Follow-ups',
+                          span: 2,
+                          children: selected.followUps.length === 0
+                            ? 'None recorded'
+                            : `${selected.followUps.length} on file`,
+                        },
+                      ]}
+                    />
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="Actions (follow-up, promise, payment, resolve) land in later tickets. This slice is read-only."
+                    />
+                  </Space>
+                ) : (
+                  <Empty description="Select an invoice from Today’s 3 or the queue." />
+                )}
+              </Card>
+            </Col>
+          </Row>
+        </Space>
+      </Content>
+    </Layout>
   )
 }
