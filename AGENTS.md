@@ -1,6 +1,6 @@
 # Agent instructions
 
-This repo is configured for Matt Pocock engineering skills (Cursor). Spec: GitHub issue [#1](https://github.com/gabrielgiorisatto/invoice-collections-desk/issues/1). **Do not** `/implement` or `/tdd` until Gabriel approves the ticket breakdown and says to implement.
+This repo is configured for Matt Pocock engineering skills (Cursor). Spec: [#1](https://github.com/gabrielgiorisatto/invoice-collections-desk/issues/1). Tickets: [#2](https://github.com/gabrielgiorisatto/invoice-collections-desk/issues/2)–[#8](https://github.com/gabrielgiorisatto/invoice-collections-desk/issues/8). **Do not** `/implement` or `/tdd` until Gabriel says to implement (frontier starts at #2).
 
 ## Settled (grill nearly closed)
 
