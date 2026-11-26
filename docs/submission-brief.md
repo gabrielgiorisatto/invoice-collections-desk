@@ -4,7 +4,7 @@
 
 A finance operator has half an hour and a spreadsheet sorted by age. Age mixes a broken promise, a promise that is not due, a quantity dispute, an invoice nobody has called, and a customer who says the bill is wrong. This desk replaces that pile with three morning follow-ups, a queue, and actions that mean different things.
 
-No hosted URL is included. Render steps are in the README. The service has not been created.
+No hosted URL is included. Local setup and the demo login are in the README. `render.yaml` is the blueprint if you host it later.
 
 ## Who it is for
 
@@ -20,7 +20,7 @@ Open Aster and Brook side by side. Aster’s chase actions are off and say why. 
 
 Record a full payment on Brook. Brook leaves the queue and Paid total moves. Record a follow-up somewhere else. Paid total does not move. Resolve Crest. Crest leaves the queue and Paid total still does not move. Refresh. The session is still there.
 
-The in-app Guide (sidebar) says the same thing in operating language: what Next up is, what the colors mean, what each action does, how filters differ from sort, and what a refresh keeps.
+The in-app Guide is the four clicks on the desk. It points at the README for how Next up is chosen and what counts as cash.
 
 ## The judgment, in one pass
 
@@ -34,13 +34,13 @@ The queue is for scanning (soft row tint, short tags, external filters, column s
 
 ## What we left out
 
-No bank, no payment processing, no reminders, no ledger, no legal workflow, no full dispute or account-manager product, no login. Partial payments are in, on purpose.
+No bank, no payment processing, no reminders, no ledger, no legal workflow, no full dispute or account-manager product, no real accounts. Partial payments are in, on purpose. The sign-in screen is the demo account in the README.
 
 ## How it is built
 
-Node 22, React, Ant Design, a pure `domain/` with Vitest, and an Express API. One HTTP-only cookie, one SQLite row per browser. `npm test` is 62 tests on rules, lifecycle, filters, and the API. `npm start` listens on `PORT` and serves `/`. `render.yaml` builds with dev dependencies available, starts that server, and mounts a 1 GB disk at `/var/data` on a Starter instance so the file survives a deploy. Free Render has no disk; the README says what you lose.
+Node 22, React, Ant Design, a pure `domain/` with Vitest, and an Express API. One HTTP-only cookie, one SQLite row per browser. `npm start` listens on `PORT` and serves `/`. `render.yaml` is the host blueprint.
 
-Longer reasoning is in `docs/decisions.md`. Setup, the metric, the manual checklist, and the walkthrough in full are in the README.
+The reviewer read is the README. The same calls, shorter, are in `docs/decisions.md`.
 
 ## Ownership
 

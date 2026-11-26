@@ -226,17 +226,20 @@ const walkthrough = [
 
 function GuidePage() {
   return (
-    <ol className="walkthrough">
-      {walkthrough.map((step, index) => (
-        <li key={step.label}>
-          <span className="walk-index" aria-hidden="true">{index + 1}</span>
-          <div className="walk-card">
-            <span className="walk-label">{step.label}</span>
-            <p>{step.detail}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="walkthrough">
+        {walkthrough.map((step, index) => (
+          <li key={step.label}>
+            <span className="walk-index" aria-hidden="true">{index + 1}</span>
+            <div className="walk-card">
+              <span className="walk-label">{step.label}</span>
+              <p>{step.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="page-subtitle">How Next up is chosen, and what counts as cash, is in the README.</p>
+    </>
   )
 }
 
