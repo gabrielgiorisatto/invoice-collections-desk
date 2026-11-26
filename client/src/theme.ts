@@ -16,7 +16,7 @@ export const deskTheme: ThemeConfig = {
     colorBgElevated: '#FFFFFF',
     colorFillAlter: '#F9FAFB',
     borderRadius: 8,
-    fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
+    fontFamily: '"Inter", "Segoe UI", sans-serif',
     fontSize: 14,
     controlHeight: 36,
   },

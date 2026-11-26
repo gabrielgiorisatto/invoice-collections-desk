@@ -6,17 +6,16 @@ import {
   type Invoice,
 } from '@domain/index.ts'
 
-export function invoiceStatusLabel(invoice: Invoice): { label: string; color: string } {
+export function invoiceStatusLabel(invoice: Invoice): string {
   if (!inActiveQueue(invoice)) {
-    if (settlement(invoice) === 'paid') return { label: 'paid', color: 'success' }
-    return { label: 'resolved', color: 'default' }
+    if (settlement(invoice) === 'paid') return 'paid'
+    return 'resolved'
   }
-  const dispute = disputeStatus(invoice)
-  if (dispute === 'open') return { label: 'disputed', color: 'error' }
+  if (disputeStatus(invoice) === 'open') return 'disputed'
   const promise = promiseStatus(invoice)
-  if (promise === 'broken') return { label: 'broken promise', color: 'warning' }
-  if (promise === 'active') return { label: 'promised', color: 'processing' }
-  if (settlement(invoice) === 'partial') return { label: 'partial', color: 'gold' }
-  if (invoice.invoiceAccuracy === 'unverified_claim') return { label: 'unverified', color: 'orange' }
-  return { label: 'open', color: 'default' }
+  if (promise === 'broken') return 'broken promise'
+  if (promise === 'active') return 'promised'
+  if (settlement(invoice) === 'partial') return 'partial'
+  if (invoice.invoiceAccuracy === 'unverified_claim') return 'unverified'
+  return 'open'
 }

@@ -8,7 +8,6 @@ import {
   Menu,
   Spin,
   Table,
-  Tag,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -34,10 +33,10 @@ import {
   remaining,
   todaysThree,
   type Invoice,
-  type PriorityTier,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 import { invoiceStatusLabel } from './status.ts'
+import { PriorityTag, StatusTag } from './tags.tsx'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
@@ -52,22 +51,6 @@ function money(amount: number) {
   }).format(amount)
 }
 
-function tierColor(tier: PriorityTier) {
-  switch (tier) {
-    case 'P0':
-      return 'warning'
-    case 'P1':
-      return 'processing'
-    case 'P2':
-      return 'default'
-    case 'P3':
-      return 'success'
-    default: {
-      const _exhaustive: never = tier
-      return _exhaustive
-    }
-  }
-}
 
 function pickIcon(invoice: Invoice) {
   const promise = promiseStatus(invoice)
@@ -154,16 +137,13 @@ export default function DeskPage() {
       title: 'Priority',
       key: 'priority',
       width: 80,
-      render: (_value, row) => <Tag color={tierColor(priorityTier(row))}>{priorityTier(row)}</Tag>,
+      render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
       width: 140,
-      render: (_value, row) => {
-        const status = invoiceStatusLabel(row)
-        return <Tag color={status.color}>{status.label}</Tag>
-      },
+      render: (_value, row) => <StatusTag label={invoiceStatusLabel(row)} />,
     },
   ]
 
@@ -221,7 +201,7 @@ export default function DeskPage() {
                       <div className="value accent">{money(kpis.openRemaining)}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Today’s 3</div>
+                      <div className="label">Next up</div>
                       <div className="value">{kpis.todayCount}</div>
                     </div>
                     <div className="kpi-card">
@@ -235,8 +215,8 @@ export default function DeskPage() {
                   </div>
 
                   {nav === 'desk' ? (
-                    <section className="section-block" aria-labelledby="todays-3">
-                      <h2 id="todays-3">Today’s 3</h2>
+                    <section className="section-block" aria-labelledby="next-up">
+                      <h2 id="next-up">Next up</h2>
                       {picks.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
                       ) : (
@@ -258,7 +238,7 @@ export default function DeskPage() {
                                 <span style={{ minWidth: 0 }}>
                                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                     <span className="code">{invoice.code}</span>
-                                    <Tag color={tierColor(tier)} style={{ marginInlineEnd: 0 }}>{tier}</Tag>
+                                    <PriorityTag tier={tier} />
                                   </div>
                                   <div className="amt">{money(remaining(invoice))} Remaining</div>
                                   <div className="why">{reason}</div>
@@ -307,9 +287,9 @@ export default function DeskPage() {
             <div style={{ marginBottom: 12 }}>
               <Text type="secondary">{selected.customer}</Text>
             </div>
-            <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
-              <Tag color={tierColor(priorityTier(selected))}>{priorityTier(selected)}</Tag>
-              <Tag color={invoiceStatusLabel(selected).color}>{invoiceStatusLabel(selected).label}</Tag>
+            <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <PriorityTag tier={priorityTier(selected)} />
+              <StatusTag label={invoiceStatusLabel(selected)} />
             </div>
             <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
               {explainPriority(selected).reason}

@@ -146,3 +146,33 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .today-grid { grid-template-columns: 1fr; }
 }
+
+body {
+  font-family: "Inter", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.solid-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.solid-tag.p0 { background: #E11D48; color: #FFFFFF; }
+.solid-tag.p1 { background: #F59E0B; color: #111827; }
+.solid-tag.p2 { background: #64748B; color: #FFFFFF; }
+.solid-tag.p3 { background: #16A34A; color: #FFFFFF; }
+.solid-tag.status-open { background: #E5E7EB; color: #111827; }
+.solid-tag.status-promised { background: #2563EB; color: #FFFFFF; }
+.solid-tag.status-broken { background: #E11D48; color: #FFFFFF; }
+.solid-tag.status-disputed { background: #7C2D12; color: #FFFFFF; }
+.solid-tag.status-unverified { background: #D97706; color: #111827; }
+.solid-tag.status-partial { background: #0F766E; color: #FFFFFF; }
+.solid-tag.status-paid { background: #16A34A; color: #FFFFFF; }
+.solid-tag.status-resolved { background: #6B7280; color: #FFFFFF; }

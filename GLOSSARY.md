@@ -54,12 +54,16 @@ _Avoid_: Event, mutation, update
 The fixed count of follow-up slots for one morning session — always **3**.
 _Avoid_: Capacity (alone), daily limit
 
+**Next up**:
+Operator-facing label for the morning follow-up list (up to **MorningCapacity** invoices). Same selection rules as **Today’s 3**.
+_Avoid_: Priority queue (collides with Queue), recommendations, top N
+
 **Today’s 3**:
-The up-to-three **Invoice**s auto-picked for this morning: fill from priority tier **P0** first (fixed P0 order), then backfill from **P1** only when no **P0** candidates remain, capped by **MorningCapacity**.
-_Avoid_: Recommendations, AI picks, scoreboard, top N
+Domain name for the auto-picked morning set: fill from priority tier **P0** first (fixed P0 order), then backfill from **P1** only when no **P0** candidates remain, capped by **MorningCapacity**. UI shows this as **Next up**.
+_Avoid_: Recommendations, AI picks, scoreboard
 
 **Follow-up slot**:
-One of the **MorningCapacity** morning slots consumed only by morning follow-up work in **Today’s 3**. Recording **payment received** or **Resolve** does **not** consume a slot.
+One of the **MorningCapacity** morning slots consumed only by morning follow-up work in **Next up**. Recording **payment received** or **Resolve** does **not** consume a slot.
 _Avoid_: Intervention slot (activation workbench term), weekly capacity
 
 ### Metric
