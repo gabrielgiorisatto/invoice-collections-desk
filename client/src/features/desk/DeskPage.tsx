@@ -3,6 +3,7 @@ import {
   Alert,
   App,
   Button,
+  Checkbox,
   Drawer,
   Empty,
   Layout,
@@ -22,6 +23,7 @@ import {
   DollarOutlined,
   FileTextOutlined,
   FlagOutlined,
+  MenuOutlined,
   UnorderedListOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -48,6 +50,7 @@ import {
   queueStatusFacetLabels,
   remaining,
   todaysThree,
+  visibleQueue,
   type DateFilterPreset,
   type Invoice,
   type PriorityTier,
@@ -57,7 +60,10 @@ import {
   type QueueStatusFacet,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
+import { fetchSession } from '../../api/session.ts'
 import ActionModal from './ActionModal.tsx'
+import BrandMark from './BrandMark.tsx'
+import LoginScreen from './LoginScreen.tsx'
 import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
 import {
   detailsStateValue,
@@ -211,98 +217,75 @@ function InvoiceDetailPanel({
   )
 }
 
+const walkthrough = [
+  { label: 'Next up', detail: 'Open a card.' },
+  { label: 'Invoice', detail: 'Read the status, Paid, and Due.' },
+  { label: 'Record follow-up', detail: 'Take the blue action.' },
+  { label: 'Queue', detail: 'Find that invoice in the table.' },
+] as const
+
 function GuidePage() {
   return (
-    <article className="guide-page">
-      <section>
-        <h2>Next up</h2>
-        <p>
-          The three cards are this morning’s follow-ups. Open one to see the invoice.
-          The line under the amount says why it is here.
-        </p>
-        <p>
-          Recording a payment, or resolving without payment, does not use up a slot.
-          When a High invoice leaves the queue, the next one moves into the three.
-          A promise that is still in the future stays off this list while High work remains.
-        </p>
-      </section>
-
-      <section>
-        <h2>Priority colors</h2>
-        <p>
-          The row wash is the priority. The tag is the same fact, easier to read in a column.
-          These are tiers, not a score and not a prediction of who will pay.
-        </p>
-        <ul className="guide-swatches">
-          <li><span className="pill prio-p0">High</span> Soft red row. Broken promise, never contacted, or details not checked.</li>
-          <li><span className="pill prio-p1">Med</span> Soft amber row. Open dispute, or follow-ups nobody answered.</li>
-          <li><span className="pill prio-p2">Low</span> Soft blue row. Promise on file, not due yet. Wait.</li>
-          <li><span className="pill prio-p3">Clear</span> Soft green row. Nothing left to chase.</li>
-        </ul>
-        <p>
-          Other tags: <span className="pill tone-attention">Broken</span> and needs-check are orange.
-          <span className="pill tone-caution">Disputed</span> is red.
-          <span className="pill tone-wait">Open</span> and verified are blue.
-          A dash means nothing is recorded there.
-        </p>
-      </section>
-
-      <section>
-        <h2>Actions</h2>
-        <p>
-          The drawer lists every action in the same order. The blue button is the one that fits this invoice.
-          The others stay visible. The line under a gray button says why it is off.
-        </p>
-        <ul>
-          <li><strong>Record follow-up</strong> is a contact note. It is not payment, and it does not verify the invoice.</li>
-          <li><strong>Record payment</strong> is the only action that counts cash. Part of the balance is allowed.</li>
-          <li><strong>Record promise</strong> saves a date. A future date waits. A past unpaid date is broken.</li>
-          <li><strong>Resolve without payment</strong> leaves the queue and does not count as cash.</li>
-          <li><strong>Route to AM</strong> is a labeled simulation. It does not message a real account manager.</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>Filters and sort</h2>
-        <p>
-          Due window, above the totals, limits Next up, the totals, and the queue together.
-          Status, Promise, and Priority narrow only the table. Click a column title to sort.
-          If the table is empty, it says whether the window matched nothing or the queue is cleared, and offers a way back.
-        </p>
-      </section>
-
-      <section>
-        <h2>Refresh</h2>
-        <p>
-          This browser keeps the desk. Refresh and the same notes, promises, and payments are still there.
-          Another browser starts from the six sample invoices. If the server file is wiped, this browser starts over too.
-        </p>
-      </section>
-
-      <section>
-        <h2>The six invoices</h2>
-        <p>Dates are relative to the demo day on the sidebar, 2026-11-26. The customers are fictional.</p>
-        <ul>
-          <li><strong>Dune</strong> promised to pay and the date passed. Follow up.</li>
-          <li><strong>Brook</strong> has never been contacted. Make the first call.</li>
-          <li><strong>Grove</strong> says the invoice details are wrong. Check them before chasing.</li>
-          <li><strong>Crest</strong> promised a date that has not arrived. Wait.</li>
-          <li><strong>Aster</strong> disputes the quantity. Do not treat it as a cold chase.</li>
-          <li><strong>East</strong> did not answer two follow-ups. It stays Med until no High work is left. Routing to the account manager is for an open dispute, which is Aster, not East.</li>
-        </ul>
-      </section>
-    </article>
+    <ol className="walkthrough">
+      {walkthrough.map((step, index) => (
+        <li key={step.label}>
+          <span className="walk-index" aria-hidden="true">{index + 1}</span>
+          <div className="walk-card">
+            <span className="walk-label">{step.label}</span>
+            <p>{step.detail}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
   )
 }
 
-export default function DeskPage() {
+function useNarrowLayout() {
+  const query = '(max-width: 900px)'
+  const [narrow, setNarrow] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const media = window.matchMedia(query)
+    const onChange = () => setNarrow(media.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+  return narrow
+}
+
+function SideNav({ nav, onSelect }: { nav: string; onSelect: (key: string) => void }) {
+  return (
+    <div className="side-nav">
+      <div className="brand">
+        <BrandMark />
+        <div className="brand-name">Collections Desk</div>
+      </div>
+      <Menu
+        theme="light"
+        mode="inline"
+        selectedKeys={[nav]}
+        onClick={({ key }) => onSelect(key)}
+        style={{ borderInlineEnd: 0, padding: '12px 8px' }}
+        items={[
+          { key: 'desk', icon: <DashboardOutlined />, label: 'Desk' },
+          { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
+        ]}
+      />
+      <div className="sider-foot">Demo {demoDay}</div>
+    </div>
+  )
+}
+
+function DeskWorkspace() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
+  const [navOpen, setNavOpen] = useState(false)
+  const [showPaid, setShowPaid] = useState(false)
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
   const [queueFilters, setQueueFilters] = useState<QueueFilters>(emptyQueueFilters)
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
+  const narrow = useNarrowLayout()
   const { message } = App.useApp()
 
   useEffect(() => {
@@ -330,15 +313,15 @@ export default function DeskPage() {
   )
   const picks = useMemo(() => todaysThree(filtered), [filtered])
   const queue = useMemo(() => {
-    const active = queueView?.kind === 'ready' ? queueView.active : []
+    const rows = queueView ? visibleQueue(queueView, filtered, queueFilters, showPaid) : []
     // Default order until the operator clicks a column sorter.
-    return [...active].sort(
+    return [...rows].sort(
       (a, b) =>
         tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
         || remaining(b) - remaining(a)
         || overdueDays(b) - overdueDays(a),
     )
-  }, [queueView])
+  }, [queueView, filtered, queueFilters, showPaid])
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
   const emptyCopy = queueView && queueView.kind !== 'ready' ? deskEmptyCopy(queueView) : null
@@ -447,26 +430,47 @@ export default function DeskPage() {
   const onGuide = nav === 'guide'
 
   return (
-    <Layout style={{ minHeight: '100%' }}>
-      <Sider width={220} className="desk-sider" breakpoint="lg" collapsedWidth={0}>
-        <div className="brand">
-          <div className="brand-mark">CD</div>
-          <div className="brand-name">Collections Desk</div>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[nav]}
-          onClick={({ key }) => setNav(key)}
-          style={{ borderInlineEnd: 0, padding: '12px 8px' }}
-          items={[
-            { key: 'desk', icon: <DashboardOutlined />, label: 'Desk' },
-            { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
-          ]}
-        />
-        <div className="sider-foot">Demo {demoDay}</div>
-      </Sider>
+    <Layout className="desk-shell" style={{ minHeight: '100%' }}>
+      {narrow ? (
+        <Drawer
+          placement="left"
+          open={navOpen}
+          onClose={() => setNavOpen(false)}
+          width="min(280px, 100vw)"
+          className="nav-drawer"
+          title="Menu"
+          destroyOnClose
+        >
+          <SideNav
+            nav={nav}
+            onSelect={key => {
+              setNav(key)
+              setNavOpen(false)
+            }}
+          />
+        </Drawer>
+      ) : (
+        <Sider width={220} theme="light" trigger={null} className="desk-sider">
+          <SideNav nav={nav} onSelect={setNav} />
+        </Sider>
+      )}
 
-      <Layout>
+      <Layout className="desk-body">
+        {narrow ? (
+          <header className="mobile-bar">
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-label="Open menu"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen(true)}
+            >
+              <MenuOutlined />
+            </button>
+            <BrandMark />
+            <span className="mobile-bar-name">Collections Desk</span>
+          </header>
+        ) : null}
         <Content className="desk-main">
           {error ? <Alert type="error" showIcon message={error} /> : null}
           {!invoices && !error ? (
@@ -481,7 +485,7 @@ export default function DeskPage() {
                 <h1 className="page-title">{onGuide ? 'Guide' : 'Desk'}</h1>
                 <p className="page-subtitle">
                   {onGuide
-                    ? 'How to use the desk.'
+                    ? 'Next up, open the invoice, one action, then the queue.'
                     : 'Collections operations desk for invoice follow-ups.'}
                 </p>
               </header>
@@ -496,6 +500,7 @@ export default function DeskPage() {
                     </label>
                     <Segmented
                       id="due-window-filter"
+                      className="due-window"
                       aria-labelledby="due-window-label"
                       value={dateFilter}
                       onChange={value => setDateFilter(value as DateFilterPreset)}
@@ -589,6 +594,14 @@ export default function DeskPage() {
                         <UnorderedListOutlined className="section-icon" aria-hidden />
                         Queue
                       </h2>
+                      <Checkbox
+                        className="show-paid"
+                        checked={showPaid}
+                        aria-label="Show paid and resolved"
+                        onChange={event => setShowPaid(event.target.checked)}
+                      >
+                        Show paid
+                      </Checkbox>
                     </div>
                     <div className="queue-filter-bar" role="group" aria-label="Queue filters">
                       <label className="filter-label" htmlFor="queue-filter-status">Status</label>
@@ -597,7 +610,7 @@ export default function DeskPage() {
                         aria-label="Filter by status"
                         allowClear
                         placeholder="All"
-                        style={{ minWidth: 140 }}
+                        className="queue-filter-control"
                         value={queueFilters.status ?? undefined}
                         onChange={value => setQueueFilters(current => ({
                           ...current,
@@ -614,7 +627,7 @@ export default function DeskPage() {
                         aria-label="Filter by promise"
                         allowClear
                         placeholder="All"
-                        style={{ minWidth: 140 }}
+                        className="queue-filter-control"
                         value={queueFilters.promise ?? undefined}
                         onChange={value => setQueueFilters(current => ({
                           ...current,
@@ -631,7 +644,7 @@ export default function DeskPage() {
                         aria-label="Filter by priority"
                         allowClear
                         placeholder="All"
-                        style={{ minWidth: 120 }}
+                        className="queue-filter-control"
                         value={queueFilters.priority ?? undefined}
                         onChange={value => setQueueFilters(current => ({
                           ...current,
@@ -710,7 +723,7 @@ export default function DeskPage() {
         open={Boolean(drawerInvoice)}
         onClose={() => setDrawerId(null)}
         className="invoice-drawer"
-        width={420}
+        width="min(420px, 100vw)"
         destroyOnClose
       >
         {drawerInvoice ? (
@@ -745,4 +758,32 @@ export default function DeskPage() {
       ) : null}
     </Layout>
   )
+}
+
+export default function DeskPage() {
+  const [authed, setAuthed] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetchSession()
+      .then(ok => {
+        if (alive) setAuthed(ok)
+      })
+      .catch(() => {
+        if (alive) setAuthed(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (authed === null) {
+    return (
+      <div className="gate-loading">
+        <Spin />
+      </div>
+    )
+  }
+  if (!authed) return <LoginScreen onSignedIn={() => setAuthed(true)} />
+  return <DeskWorkspace />
 }

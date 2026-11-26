@@ -5,7 +5,7 @@ import {
   describeQueueFilters,
   emptyQueueFilters,
   filterByQueueFilters,
-  queueFiltersActive,
+  matchesQueueFilters,
   type QueueFilters,
 } from './queue-query.ts'
 
@@ -56,6 +56,27 @@ export function deskQueueView(
   }
 
   return { kind: 'ready', active: matched }
+}
+
+/**
+ * Rows for the queue table. Paid and resolved stay out until the operator
+ * turns on Show paid. Due window and the other facets still apply.
+ */
+export function visibleQueue(
+  view: DeskQueueView,
+  dueFiltered: Invoice[],
+  filters: QueueFilters,
+  showPaid: boolean,
+): Invoice[] {
+  const active = view.kind === 'ready' ? view.active : []
+  if (!showPaid) return active
+  const seen = new Set(active.map(invoice => invoice.id))
+  const settled = dueFiltered.filter(invoice =>
+    !inActiveQueue(invoice)
+    && !seen.has(invoice.id)
+    && matchesQueueFilters(invoice, filters),
+  )
+  return [...active, ...settled]
 }
 
 export function deskEmptyCopy(view: Exclude<DeskQueueView, { kind: 'ready' }>): DeskEmptyCopy {

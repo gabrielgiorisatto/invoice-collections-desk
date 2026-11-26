@@ -1,4 +1,4 @@
-import { applyChange, seed, type Change, type Invoice, type ResolutionReason } from '../../domain/index.ts'
+import { applyChange, demoAccount, seed, type Change, type Invoice, type ResolutionReason } from '../../domain/index.ts'
 import type { Database } from './database.ts'
 
 function readInvoices(payload?: string): Invoice[] {
@@ -90,23 +90,62 @@ export function parseChange(input: unknown): Change | undefined {
   }
 }
 
+const demoCookieName = 'collections_demo'
+
+function readSessionId(cookieHeader: string | null): string | undefined {
+  return cookieHeader?.match(new RegExp(`(?:^|;\\s*)${demoCookieName}=([\\da-f-]{36})(?:;|$)`))?.[1]
+}
+
+function demoSessionCookie(id: string, protocol: string): string {
+  const secure = protocol === 'https:' ? '; Secure' : ''
+  return `${demoCookieName}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${secure}`
+}
+
+function loginBody(input: unknown): { username: string; password: string } | undefined {
+  if (!input || typeof input !== 'object') return
+  const body = input as Record<string, unknown>
+  const username = typeof body.username === 'string' ? body.username.trim() : ''
+  const password = typeof body.password === 'string' ? body.password : ''
+  return { username, password }
+}
+
 export async function handleRequest(request: Request, db: Database) {
   const url = new URL(request.url)
-  const storedId = request.headers.get('cookie')?.match(/(?:^|;\s*)collections_demo=([\da-f-]{36})(?:;|$)/)?.[1]
-  const id = storedId ?? crypto.randomUUID()
   const headers = new Headers({ 'cache-control': 'no-store' })
-  if (!storedId) {
-    headers.set(
-      'set-cookie',
-      `collections_demo=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${url.protocol === 'https:' ? '; Secure' : ''}`,
-    )
-  }
   const json = (body: unknown, status = 200) => Response.json(body, { status, headers })
+  const storedId = readSessionId(request.headers.get('cookie'))
+
+  if (request.method === 'GET' && url.pathname === '/api/session') {
+    return json({ authenticated: Boolean(storedId) })
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/login') {
+    let parsed: unknown
+    try { parsed = JSON.parse(await request.text()) } catch { parsed = undefined }
+    const credentials = loginBody(parsed)
+    const matches = credentials?.username === demoAccount.username
+      && credentials.password === demoAccount.password
+    if (!matches) return json({ error: 'Those credentials do not match the demo account.' }, 401)
+    const id = crypto.randomUUID()
+    await db.prepare('INSERT OR IGNORE INTO demo_sessions (id, payload) VALUES (?, ?)')
+      .bind(id, JSON.stringify(seed()))
+      .run()
+    headers.set('set-cookie', demoSessionCookie(id, url.protocol))
+    return json({ ok: true })
+  }
+
+  const key = url.pathname.match(/^\/api\/invoices\/([A-Za-z0-9-]+)$/)?.[1]
+  const invoiceList = request.method === 'GET' && url.pathname === '/api/invoices'
+  const invoicePatch = request.method === 'PATCH' && Boolean(key)
+  if (!invoiceList && !invoicePatch) return json({ errors: { form: 'Endpoint not found.' } }, 404)
+  if (!storedId) return json({ error: 'Sign in to open the desk.' }, 401)
+
+  const id = storedId
   const read = () => db.prepare('SELECT payload, revision FROM demo_sessions WHERE id = ?').bind(id)
     .first<{ payload: string; revision: number }>()
 
-  if (request.method === 'GET' && url.pathname === '/api/invoices') {
-    const row = storedId ? await read() : null
+  if (invoiceList) {
+    const row = await read()
     const invoices = readInvoices(row?.payload)
     if (!row) {
       await db.prepare('INSERT OR IGNORE INTO demo_sessions (id, payload) VALUES (?, ?)').bind(id, JSON.stringify(invoices)).run()
@@ -114,7 +153,6 @@ export async function handleRequest(request: Request, db: Database) {
     return json({ invoices })
   }
 
-  const key = url.pathname.match(/^\/api\/invoices\/([A-Za-z0-9-]+)$/)?.[1]
   if (request.method === 'PATCH' && key) {
     const raw = await request.text()
     if (raw.length > 10_000) return json({ errors: { form: 'Update is too large.' } }, 413)

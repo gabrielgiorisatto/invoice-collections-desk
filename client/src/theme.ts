@@ -25,7 +25,8 @@ export const deskTheme: ThemeConfig = {
       siderBg: '#FFFFFF',
       headerBg: '#FFFFFF',
       bodyBg: '#F9FAFB',
-      triggerBg: '#FFFFFF',
+      triggerBg: '#F3F4F6',
+      triggerColor: '#111827',
     },
     Menu: {
       itemBg: 'transparent',

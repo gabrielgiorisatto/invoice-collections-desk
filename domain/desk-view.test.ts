@@ -3,6 +3,7 @@ import { applyChange } from './apply-change.ts'
 import {
   deskEmptyCopy,
   deskQueueView,
+  visibleQueue,
   type DeskQueueView,
 } from './desk-view.ts'
 import { filterByDueWindow } from './date-filter.ts'
@@ -128,6 +129,41 @@ describe('deskQueueView', () => {
     if (view.kind === 'ready') {
       expect(view.active.map(item => item.code).sort()).toEqual(['Brook', 'Grove'])
     }
+  })
+})
+
+describe('visibleQueue', () => {
+  it('hides paid and resolved invoices until show paid is on', () => {
+    let session = payInFull(seed(), seedInvoiceIds.Brook)
+    session = applyChange(session, seedInvoiceIds.Crest, {
+      type: 'resolve',
+      value: { reason: 'other', note: 'Written off for demo' },
+    }).invoices
+    const filtered = filterByDueWindow(session, 'all-time')
+    const view = deskQueueView(session, filtered, 'all-time')
+    const hidden = visibleQueue(view, filtered, emptyQueueFilters, false).map(item => item.code)
+    expect(hidden).not.toContain('Brook')
+    expect(hidden).not.toContain('Crest')
+    const shown = visibleQueue(view, filtered, emptyQueueFilters, true).map(item => item.code)
+    expect(shown).toContain('Brook')
+    expect(shown).toContain('Crest')
+  })
+
+  it('shows the settled book when the queue is cleared and show paid is on', () => {
+    const session = clearAllByPayment(seed())
+    const filtered = filterByDueWindow(session, 'all-time')
+    const view = deskQueueView(session, filtered, 'all-time')
+    expect(visibleQueue(view, filtered, emptyQueueFilters, false)).toHaveLength(0)
+    expect(visibleQueue(view, filtered, emptyQueueFilters, true)).toHaveLength(6)
+  })
+
+  it('still hides a paid invoice that misses an active status filter', () => {
+    const session = payInFull(seed(), seedInvoiceIds.Brook)
+    const filtered = filterByDueWindow(session, 'all-time')
+    const filters: QueueFilters = { ...emptyQueueFilters, status: 'open' }
+    const view = deskQueueView(session, filtered, 'all-time', filters)
+    const shown = visibleQueue(view, filtered, filters, true).map(item => item.code)
+    expect(shown).not.toContain('Brook')
   })
 })
 

@@ -47,6 +47,8 @@ The drawer is where the amounts and the state are structured: paid of face amoun
 
 ## One cookie, one file
 
-There is no account system. The browser holds an HTTP-only cookie. SQLite holds the invoice JSON for that id. Refresh is a read of the same row. Two tabs compare a revision and the loser gets a conflict instead of a silent overwrite.
+There is no real account system. The sign-in screen is a labeled simulation and only issues this cookie. The browser holds an HTTP-only cookie. SQLite holds the invoice JSON for that id. Refresh is a read of the same row. Two tabs compare a revision and the loser gets a conflict instead of a silent overwrite.
+
+A reviewer can trust a change when the domain tests still describe these rules, the HTTP tests still read and write this SQLite session, and lint and CI are green. Branch protection on main has to require those checks; the workflow file alone does not stop a merge.
 
 On Render, that file is worth keeping only if it sits on a disk. Free instances have no disk, so the file dies with the container and the next request for that cookie reseeds. The blueprint therefore uses a Starter instance and mounts `/var/data`. That is a deploy choice, not a claim that a hosted URL already exists.
