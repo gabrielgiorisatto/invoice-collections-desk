@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { demoDay, formatDueDate, morningCapacity, priorityTier, todaysThree, type Invoice } from './index.ts'
+import { compareMorningOrder, demoDay, formatDueDate, morningCapacity, priorityTier, todaysThree, type Invoice } from './index.ts'
 import { seed, seedInvoiceIds } from './seed.ts'
 
 const byCode = (invoices: Invoice[], code: string) => invoices.find(item => item.code === code)!
@@ -13,6 +13,12 @@ describe('priority tiers and Today’s 3', () => {
     expect(priorityTier(byCode(invoices, 'East'))).toBe('P1')
     expect(priorityTier(byCode(invoices, 'Aster'))).toBe('P1')
     expect(priorityTier(byCode(invoices, 'Crest'))).toBe('P2')
+  })
+
+  it('orders the queue like Next up: broken, then never contacted, then unverified', () => {
+    const ordered = [...seed()].sort(compareMorningOrder).map(invoice => invoice.code)
+    expect(ordered.slice(0, morningCapacity)).toEqual(todaysThree(seed()).map(invoice => invoice.code))
+    expect(ordered).toEqual(['Dune', 'Brook', 'Grove', 'Aster', 'East', 'Crest'])
   })
 
   it('fills Today’s 3 from P0 in fixed order: broken → never contacted → unverified', () => {

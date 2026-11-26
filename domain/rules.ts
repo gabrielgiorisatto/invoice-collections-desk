@@ -93,10 +93,23 @@ function p0Rank(invoice: Invoice): number {
   return 99
 }
 
+const tierRank = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
+
 function tieBreak(a: Invoice, b: Invoice) {
   const remainingDiff = remaining(b) - remaining(a)
   if (remainingDiff !== 0) return remainingDiff
   return overdueDays(b) - overdueDays(a)
+}
+
+/** Next up and the queue table share this order. P0 is broken, then never contacted, then unverified. */
+export function compareMorningOrder(a: Invoice, b: Invoice): number {
+  const tierDiff = tierRank[priorityTier(a)] - tierRank[priorityTier(b)]
+  if (tierDiff !== 0) return tierDiff
+  if (priorityTier(a) === 'P0') {
+    const rankDiff = p0Rank(a) - p0Rank(b)
+    if (rankDiff !== 0) return rankDiff
+  }
+  return tieBreak(a, b) || a.code.localeCompare(b.code)
 }
 
 export function explainPriority(invoice: Invoice) {
@@ -132,10 +145,10 @@ export function todaysThree(invoices: Invoice[]): Invoice[] {
   const active = invoices.filter(inActiveQueue)
   const p0 = active
     .filter(invoice => priorityTier(invoice) === 'P0')
-    .sort((a, b) => p0Rank(a) - p0Rank(b) || tieBreak(a, b) || a.code.localeCompare(b.code))
+    .sort(compareMorningOrder)
   const p1 = active
     .filter(invoice => priorityTier(invoice) === 'P1')
-    .sort((a, b) => tieBreak(a, b) || a.code.localeCompare(b.code))
+    .sort(compareMorningOrder)
 
   return [...p0, ...p1].slice(0, morningCapacity)
 }

@@ -73,7 +73,7 @@ A follow-up does not remove an invoice. Priority does, and only from Next up. Th
 - **Brook.** The first follow-up drops “never contacted.” Brook leaves P0 and becomes P1. Dune and Grove still fill two slots, and Aster, the larger P1, takes the third. Brook stays in the queue.
 - **Dune.** A follow-up leaves the broken promise in place. Dune stays P0 and stays in the first slot.
 
-Paying the remaining balance, or resolving, is what takes an invoice out of the queue. Inside a tier, a larger remaining balance wins, then more days overdue.
+Paying the remaining balance, or resolving, is what takes an invoice out of the queue. Inside P0 the fixed order above wins, so a never-contacted invoice stays ahead of one that only needs a details check. After that, a larger remaining balance wins, then more days overdue. The queue table uses that same order.
 
 ```mermaid
 flowchart TD

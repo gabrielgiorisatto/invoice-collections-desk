@@ -8,7 +8,7 @@ Three slots. P0 first, in order: broken promise with no open dispute, never cont
 
 A follow-up does not remove an invoice. Priority does, and only from Next up. Brook’s first contact drops “never contacted,” so Brook leaves P0 and becomes P1. On the seed, Aster takes the open slot. Brook stays in the queue until it is paid or resolved. A follow-up on Dune leaves the broken promise in place, so Dune stays first.
 
-Inside a tier, a larger remaining balance wins, then more days overdue.
+Inside P0 the fixed order above wins. After that, a larger remaining balance wins, then more days overdue. The queue uses that same order.
 
 ## Tiers, not a score
 

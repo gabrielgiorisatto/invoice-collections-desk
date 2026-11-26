@@ -1,6 +1,7 @@
-import type { Invoice, PriorityTier, PromiseStatus } from './model.ts'
+import type { Invoice, PromiseStatus } from './model.ts'
 import {
   disputeStatus,
+  compareMorningOrder,
   inActiveQueue,
   overdueDays,
   priorityTier,
@@ -122,8 +123,6 @@ export type QueueSortColumn =
   | 'dispute'
   | 'details'
 
-const tierRank: Record<PriorityTier, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
-
 const statusRank: Record<ReturnType<typeof queueStatusKind>, number> = {
   broken: 0,
   disputed: 1,
@@ -147,7 +146,7 @@ export function compareQueueColumn(a: Invoice, b: Invoice, column: QueueSortColu
     case 'due':
       return a.dueDate.localeCompare(b.dueDate) || overdueDays(b) - overdueDays(a)
     case 'priority':
-      return tierRank[priorityTier(a)] - tierRank[priorityTier(b)]
+      return compareMorningOrder(a, b)
     case 'status':
       return statusRank[queueStatusKind(a)] - statusRank[queueStatusKind(b)]
     case 'promise':

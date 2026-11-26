@@ -29,6 +29,7 @@ import {
 } from '@ant-design/icons'
 import {
   activityTimeline,
+  compareMorningOrder,
   compareQueueColumn,
   dateFilterLabels,
   demoAccount,
@@ -92,8 +93,6 @@ import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
-
-const tierOrder = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
 
 function money(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -319,12 +318,7 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
   const queue = useMemo(() => {
     const rows = queueView ? visibleQueue(queueView, filtered, queueFilters, showPaid) : []
     // Default order until the operator clicks a column sorter.
-    return [...rows].sort(
-      (a, b) =>
-        tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
-        || remaining(b) - remaining(a)
-        || overdueDays(b) - overdueDays(a),
-    )
+    return [...rows].sort(compareMorningOrder)
   }, [queueView, filtered, queueFilters, showPaid])
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
