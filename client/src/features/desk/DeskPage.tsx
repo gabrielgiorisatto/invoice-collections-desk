@@ -9,6 +9,7 @@ import {
   Layout,
   Menu,
   Segmented,
+  Select,
   Space,
   Spin,
   Table,
@@ -23,11 +24,14 @@ import {
 } from '@ant-design/icons'
 import {
   activityTimeline,
+  compareQueueColumn,
   dateFilterLabels,
   demoDay,
+  describeQueueFilters,
   deskEmptyCopy,
   deskQueueView,
   disputeStatus,
+  emptyQueueFilters,
   explainPriority,
   filterByDueWindow,
   formatDueDate,
@@ -37,11 +41,19 @@ import {
   paidTotal,
   priorityTier,
   promiseStatus,
+  queueFiltersActive,
+  queuePriorityFacetLabels,
+  queuePromiseFacetLabels,
+  queueStatusFacetLabels,
   remaining,
   todaysThree,
   totalFollowUps,
   type DateFilterPreset,
   type Invoice,
+  type QueueFilters,
+  type QueuePriorityFacet,
+  type QueuePromiseFacet,
+  type QueueStatusFacet,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 import ActionModal from './ActionModal.tsx'
@@ -177,6 +189,7 @@ export default function DeskPage() {
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
+  const [queueFilters, setQueueFilters] = useState<QueueFilters>(emptyQueueFilters)
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
   const { message } = App.useApp()
 
@@ -200,12 +213,13 @@ export default function DeskPage() {
     [invoices, dateFilter],
   )
   const queueView = useMemo(
-    () => (invoices ? deskQueueView(invoices, filtered, dateFilter) : null),
-    [invoices, filtered, dateFilter],
+    () => (invoices ? deskQueueView(invoices, filtered, dateFilter, queueFilters) : null),
+    [invoices, filtered, dateFilter, queueFilters],
   )
   const picks = useMemo(() => todaysThree(filtered), [filtered])
   const queue = useMemo(() => {
     const active = queueView?.kind === 'ready' ? queueView.active : []
+    // Default order until the operator clicks a column sorter.
     return [...active].sort(
       (a, b) =>
         tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
@@ -216,6 +230,18 @@ export default function DeskPage() {
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
   const emptyCopy = queueView && queueView.kind !== 'ready' ? deskEmptyCopy(queueView) : null
+  const activeFacetLabels = describeQueueFilters(queueFilters)
+  const facetsOn = queueFiltersActive(queueFilters)
+
+  function clearQueueFilters() {
+    setQueueFilters(emptyQueueFilters)
+  }
+
+  function handleEmptyAction() {
+    if (!emptyCopy?.action) return
+    if (emptyCopy.action === 'clear-filters') clearQueueFilters()
+    else setDateFilter('all-time')
+  }
 
   const kpis = useMemo(() => {
     return {
@@ -239,6 +265,7 @@ export default function DeskPage() {
     {
       title: 'Invoice',
       key: 'invoice',
+      sorter: (a, b) => compareQueueColumn(a, b, 'invoice'),
       render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
     },
     {
@@ -246,42 +273,49 @@ export default function DeskPage() {
       key: 'remaining',
       align: 'right',
       width: 100,
+      sorter: (a, b) => compareQueueColumn(a, b, 'remaining'),
       render: (_value, row) => <Text>{money(remaining(row))}</Text>,
     },
     {
       title: 'Due',
       key: 'due',
       width: 150,
+      sorter: (a, b) => compareQueueColumn(a, b, 'due'),
       render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 64,
+      width: 80,
+      sorter: (a, b) => compareQueueColumn(a, b, 'priority'),
       render: (_value, row) => <Text>{glancePriority(priorityTier(row))}</Text>,
     },
     {
       title: 'Status',
       key: 'status',
       width: 100,
+      sorter: (a, b) => compareQueueColumn(a, b, 'status'),
       render: (_value, row) => <Text>{glanceStatus(row)}</Text>,
     },
     {
       title: 'Promise',
       key: 'promise',
-      width: 72,
+      width: 88,
+      sorter: (a, b) => compareQueueColumn(a, b, 'promise'),
       render: (_value, row) => <Text>{glancePromise(row)}</Text>,
     },
     {
       title: 'Dispute',
       key: 'dispute',
-      width: 72,
+      width: 88,
+      sorter: (a, b) => compareQueueColumn(a, b, 'dispute'),
       render: (_value, row) => <Text>{glanceDispute(row)}</Text>,
     },
     {
       title: 'Details',
       key: 'details',
-      width: 92,
+      width: 100,
+      sorter: (a, b) => compareQueueColumn(a, b, 'details'),
       render: (_value, row) => <Text>{glanceDetails(row)}</Text>,
     },
     {
@@ -440,13 +474,78 @@ export default function DeskPage() {
                         Queue
                       </Title>
                     </div>
+                    <div className="queue-filter-bar" role="group" aria-label="Queue filters">
+                      <label className="filter-label" htmlFor="queue-filter-status">Status</label>
+                      <Select
+                        id="queue-filter-status"
+                        aria-label="Filter by status"
+                        allowClear
+                        placeholder="All"
+                        style={{ minWidth: 140 }}
+                        value={queueFilters.status ?? undefined}
+                        onChange={value => setQueueFilters(current => ({
+                          ...current,
+                          status: (value as QueueStatusFacet | undefined) ?? null,
+                        }))}
+                        options={Object.entries(queueStatusFacetLabels).map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                      />
+                      <label className="filter-label" htmlFor="queue-filter-promise">Promise</label>
+                      <Select
+                        id="queue-filter-promise"
+                        aria-label="Filter by promise"
+                        allowClear
+                        placeholder="All"
+                        style={{ minWidth: 140 }}
+                        value={queueFilters.promise ?? undefined}
+                        onChange={value => setQueueFilters(current => ({
+                          ...current,
+                          promise: (value as QueuePromiseFacet | undefined) ?? null,
+                        }))}
+                        options={Object.entries(queuePromiseFacetLabels).map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                      />
+                      <label className="filter-label" htmlFor="queue-filter-priority">Priority</label>
+                      <Select
+                        id="queue-filter-priority"
+                        aria-label="Filter by priority"
+                        allowClear
+                        placeholder="All"
+                        style={{ minWidth: 120 }}
+                        value={queueFilters.priority ?? undefined}
+                        onChange={value => setQueueFilters(current => ({
+                          ...current,
+                          priority: (value as QueuePriorityFacet | undefined) ?? null,
+                        }))}
+                        options={Object.entries(queuePriorityFacetLabels).map(([value, label]) => ({
+                          value,
+                          label,
+                        }))}
+                      />
+                    </div>
+                    {facetsOn ? (
+                      <div className="queue-filter-summary" aria-live="polite">
+                        <Text>
+                          Filtering by{' '}
+                          <Text strong>{activeFacetLabels.join(' · ')}</Text>
+                        </Text>
+                        <Button type="link" onClick={clearQueueFilters} aria-label="Clear queue filters">
+                          Clear
+                        </Button>
+                      </div>
+                    ) : null}
                     <Table
                       rowKey="id"
                       size="small"
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1000 }}
+                      scroll={{ x: 1080 }}
+                      showSorterTooltip={{ target: 'sorter-icon' }}
                       rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
                         tabIndex: 0,
@@ -470,10 +569,7 @@ export default function DeskPage() {
                                 <Text strong>{emptyCopy.title}</Text>
                                 <Text type="secondary">{emptyCopy.description}</Text>
                                 {emptyCopy.actionLabel ? (
-                                  <Button
-                                    type="link"
-                                    onClick={() => setDateFilter('all-time')}
-                                  >
+                                  <Button type="link" onClick={handleEmptyAction}>
                                     {emptyCopy.actionLabel}
                                   </Button>
                                 ) : null}
@@ -519,7 +615,12 @@ export default function DeskPage() {
           onClose={() => setActionTarget(null)}
           onSaved={items => {
             applyDeskUpdate(items)
-            const nextView = deskQueueView(items, filterByDueWindow(items, dateFilter), dateFilter)
+            const nextView = deskQueueView(
+              items,
+              filterByDueWindow(items, dateFilter),
+              dateFilter,
+              queueFilters,
+            )
             message.success(
               nextView.kind === 'all-cleared'
                 ? 'Saved — queue cleared'

@@ -142,6 +142,25 @@ body {
   padding: 12px 16px;
   border-bottom: 1px solid #E5E7EB;
 }
+.queue-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #FAFBFC;
+}
+.queue-filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  background: #F8FAFC;
+}
 
 .invoice-identity {
   display: flex;
