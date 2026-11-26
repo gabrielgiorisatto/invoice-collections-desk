@@ -73,7 +73,8 @@ export function priorityTier(invoice: Invoice): PriorityTier {
   const promise = promiseStatus(invoice)
   const dispute = disputeStatus(invoice)
 
-  if (promise === 'broken') return 'P0'
+  // Open dispute is not a cold chase, even when a broken promise is still on the invoice.
+  if (promise === 'broken') return dispute === 'open' ? 'P1' : 'P0'
   if (promise === 'active') return 'P2'
   if (neverContacted(invoice) && dispute !== 'open') return 'P0'
   if (invoice.invoiceAccuracy === 'unverified_claim') return 'P0'

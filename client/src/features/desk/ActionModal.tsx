@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Alert, Checkbox, Form, Input, InputNumber, Modal, Select, Typography } from 'antd'
 import type { ActionKind, Change, Invoice, ResolutionReason } from '@domain/index.ts'
-import { actionCatalog, remaining } from '@domain/index.ts'
+import { actionPresentation, remaining } from '@domain/index.ts'
 import { patchInvoice } from '../../api/invoices.ts'
-import { disputeLabel, resolutionReasonLabel } from './labels.ts'
+import { resolutionReasonLabel } from './labels.ts'
 
 type Props = {
   invoice: Invoice
@@ -21,7 +21,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
   const [form] = Form.useForm()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
-  const catalog = actionCatalog[kind]
+  const catalog = actionPresentation(invoice, kind)
 
   useEffect(() => {
     if (!open) return
@@ -29,7 +29,15 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
     form.resetFields()
     if (kind === 'follow-up') form.setFieldsValue({ channel: 'Email', answered: false })
     if (kind === 'payment') form.setFieldsValue({ amount: remaining(invoice) })
-    if (kind === 'dispute') form.setFieldsValue({ status: 'open', evidence: '' })
+    if (kind === 'promise' && invoice.promise) {
+      form.setFieldsValue({ dueDate: invoice.promise.dueDate, note: invoice.promise.note })
+    }
+    if (kind === 'dispute') {
+      form.setFieldsValue({
+        reason: invoice.dispute?.status === 'open' ? invoice.dispute.reason : '',
+        evidence: invoice.dispute?.status === 'open' ? invoice.dispute.evidence : '',
+      })
+    }
     if (kind === 'resolve') form.setFieldsValue({ reason: 'dispute_closed' })
   }, [open, kind, invoice, form])
 
@@ -53,6 +61,15 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
         break
       case 'confirm-details':
         change = { type: 'confirm-details', value: { note: noteValue(values.note) } }
+        break
+      case 'cancel-details':
+        change = { type: 'cancel-details', value: { note: noteValue(values.note) } }
+        break
+      case 'cancel-promise':
+        change = { type: 'cancel-promise', value: { note: noteValue(values.note) } }
+        break
+      case 'cancel-dispute':
+        change = { type: 'cancel-dispute', value: { note: noteValue(values.note) } }
         break
       case 'promise':
         change = {
@@ -78,7 +95,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
           value: {
             reason: noteValue(values.reason),
             evidence: noteValue(values.evidence),
-            status: values.status,
+            status: 'open',
           },
         }
         break
@@ -109,6 +126,9 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
     kind === 'route-am'
     || kind === 'flag-details'
     || kind === 'confirm-details'
+    || kind === 'cancel-details'
+    || kind === 'cancel-promise'
+    || kind === 'cancel-dispute'
 
   const fieldErrors = Object.entries(errors).filter(([key]) => key !== 'form')
 
@@ -262,19 +282,6 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
             </Form.Item>
             <Form.Item name="evidence" label="Evidence">
               <Input aria-label="Evidence" />
-            </Form.Item>
-            <Form.Item
-              name="status"
-              label="Dispute status"
-              rules={[{ required: true, message: 'Choose a dispute status.' }]}
-            >
-              <Select
-                aria-label="Dispute status"
-                options={[
-                  { value: 'open', label: disputeLabel('open') },
-                  { value: 'resolved', label: disputeLabel('resolved') },
-                ]}
-              />
             </Form.Item>
           </>
         ) : null}

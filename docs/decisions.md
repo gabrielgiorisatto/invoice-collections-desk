@@ -14,9 +14,9 @@ The consequence is visible on the seed. Aster is $12,000 and 45 days late, and i
 
 ## Grove is something the operator does
 
-“Details might be wrong” was easy to leave as a badge. That makes Grove a label instead of a task. The operator has to either confirm the invoice or turn the claim into a dispute.
+“Details might be wrong” was easy to leave as a badge. That makes Grove a label instead of a task. The operator confirms the invoice, cancels the request, or turns the claim into a dispute.
 
-Two actions own that flag: **Flag details for review** and **Confirm details verified**. A follow-up is only a contact note. It must not clear Grove, and it must not set the flag either. Otherwise “I sent an email” and “I checked the remittance” become the same click. Confirm requires a note, so an empty save cannot wipe the flag. After a real confirm, Grove is no longer P0.
+One open details request: **Flag details for review** when none is open; **Confirm details verified** or **Cancel details request** when one is open. No second flag. A follow-up is only a contact note. It must not clear Grove, and it must not set the flag either. Otherwise “I sent an email” and “I checked the remittance” become the same click. Confirm and cancel require a note, so an empty save cannot wipe the flag. After a real confirm or cancel, Grove is no longer P0.
 
 ## Cash is not activity
 
@@ -35,9 +35,9 @@ Open remaining on the desk also skips open disputes. Aster’s balance is still 
 
 Every button is always on the drawer, in one order, so the operator learns the set. The blue one is the preferred legal action for that state. The others are disabled with a sentence, not hidden.
 
-The same matrix runs in `applyChange` on the server. A disabled button is not the control. Broken-promise invoices can take a follow-up, a new promise, or a payment. An active promise can take a payment or a resolve, not another chase. An open dispute can be updated, routed to the account manager, or resolved. Paid and resolved invoices have no actions.
+The same matrix runs in `applyChange` on the server. A disabled button is not the control. Follow-up is always a contact note on an active invoice. Details, promise, and dispute each allow one open item: flag or create when none is open; confirm/update or cancel when one is open. No second flag, and no second promise on top of the one already there. A dispute can be opened, updated, or cancelled even when the promise is broken; the broken promise stays on the invoice, and the open dispute is not a cold chase. Record payment and resolve without payment are always available and sit in one group. Paid and resolved invoices have no actions.
 
-Route to AM is allowed for an open dispute and is labeled a simulation. East’s “AM available” line is why East is P1. It does not unlock Route to AM. East is still a follow-up until someone opens a dispute.
+Route to AM is its own action, not a follow-up. It is allowed for an open dispute and is labeled a simulation. It does not append a follow-up. East’s “AM available” line is why East is P1. It does not unlock Route to AM. East is still a follow-up until someone opens a dispute.
 
 ## Table for the scan, drawer for the decision
 

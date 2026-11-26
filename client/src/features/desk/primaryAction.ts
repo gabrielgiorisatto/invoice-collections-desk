@@ -3,6 +3,8 @@ export {
   actionCatalog,
   actionDisabledReason,
   actionDisplayOrder,
+  actionGroups,
+  actionPresentation,
   availableActions,
   primaryActionKind,
 } from '@domain/index.ts'

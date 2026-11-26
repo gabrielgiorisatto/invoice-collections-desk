@@ -194,7 +194,7 @@ describe('operator actions via PATCH (happy path + rejection)', () => {
     }
   })
 
-  it('Aster dispute update + resolve; Crest rejects follow-up', async () => {
+  it('Aster dispute update + resolve; Crest accepts follow-up and rejects a second details flag', async () => {
     const { app, cookie, close } = await sessionApp()
     try {
       const dispute = await request(app)
@@ -209,10 +209,16 @@ describe('operator actions via PATCH (happy path + rejection)', () => {
         .send({ type: 'resolve', value: { reason: 'dispute_closed', note: 'Credit memo issued' } })
       expect(resolved.status).toBe(200)
 
+      const followed = await request(app)
+        .patch(`/api/invoices/${seedInvoiceIds.Crest}`)
+        .set('Cookie', cookie)
+        .send({ type: 'follow-up', value: { note: 'Checked the promise date.', channel: 'Email', answered: false } })
+      expect(followed.status).toBe(200)
+
       const rejected = await request(app)
         .patch(`/api/invoices/${seedInvoiceIds.Crest}`)
         .set('Cookie', cookie)
-        .send({ type: 'follow-up', value: { note: 'Nope', channel: 'Email', answered: false } })
+        .send({ type: 'confirm-details', value: { note: 'Nothing open to confirm.' } })
       expect(rejected.status).toBe(422)
       expect(rejected.body.errors.form).toMatch(/not available/i)
     } finally {

@@ -85,6 +85,12 @@ export function parseChange(input: unknown): Change | undefined {
       return { type: 'flag-details', value: { note: asString(value.note) ?? '' } }
     case 'confirm-details':
       return { type: 'confirm-details', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-details':
+      return { type: 'cancel-details', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-promise':
+      return { type: 'cancel-promise', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-dispute':
+      return { type: 'cancel-dispute', value: { note: asString(value.note) ?? '' } }
     default:
       return
   }

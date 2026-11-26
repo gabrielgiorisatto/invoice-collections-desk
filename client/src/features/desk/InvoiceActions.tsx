@@ -2,6 +2,7 @@ import { Button, Dropdown, Space, Tooltip } from 'antd'
 import {
   CalendarOutlined,
   CheckOutlined,
+  CloseOutlined,
   DollarOutlined,
   DownOutlined,
   FlagOutlined,
@@ -13,9 +14,9 @@ import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
 import type { Invoice } from '@domain/index.ts'
 import {
-  actionCatalog,
   actionDisabledReason,
-  actionDisplayOrder,
+  actionGroups,
+  actionPresentation,
   primaryActionKind,
   type ActionKind,
 } from './primaryAction.ts'
@@ -28,12 +29,18 @@ function actionIcon(kind: ActionKind): ReactNode {
       return <FlagOutlined />
     case 'confirm-details':
       return <CheckOutlined />
+    case 'cancel-details':
+      return <CloseOutlined />
     case 'promise':
       return <CalendarOutlined />
+    case 'cancel-promise':
+      return <CloseOutlined />
     case 'payment':
       return <DollarOutlined />
     case 'dispute':
       return <WarningOutlined />
+    case 'cancel-dispute':
+      return <CloseOutlined />
     case 'route-am':
       return <TeamOutlined />
     case 'resolve':
@@ -59,7 +66,7 @@ function ActionButton({
   kind: ActionKind
   onAction: (kind: ActionKind) => void
 }) {
-  const meta = actionCatalog[kind]
+  const meta = actionPresentation(invoice, kind)
   const disabledReason = actionDisabledReason(invoice, kind)
   const disabled = Boolean(disabledReason)
   const primary = !disabled && primaryActionKind(invoice) === kind
@@ -98,27 +105,42 @@ function ActionButton({
 
 export function InvoiceActionButtons({ invoice, onAction }: Props) {
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={10}>
-      {actionDisplayOrder.map(kind => (
-        <ActionButton key={kind} invoice={invoice} kind={kind} onAction={onAction} />
+    <div className="action-groups">
+      {actionGroups.map(group => (
+        <section
+          key={group.id}
+          className={group.id === 'settlement' ? 'action-group action-group-settlement' : 'action-group'}
+          aria-label={group.label}
+        >
+          <h4 className="action-group-label">{group.label}</h4>
+          <Space direction="vertical" style={{ width: '100%' }} size={10}>
+            {group.kinds.map(kind => (
+              <ActionButton key={kind} invoice={invoice} kind={kind} onAction={onAction} />
+            ))}
+          </Space>
+        </section>
       ))}
-    </Space>
+    </div>
   )
 }
 
 export function InvoiceRowMenu({ invoice, onAction }: Props) {
-  const items: MenuProps['items'] = actionDisplayOrder.map(kind => {
-    const meta = actionCatalog[kind]
-    const reason = actionDisabledReason(invoice, kind)
-    const primary = !reason && primaryActionKind(invoice) === kind
-    return {
-      key: kind,
-      disabled: Boolean(reason),
-      title: reason ?? meta.hint,
-      label: primary ? `${meta.label} · Primary` : meta.label,
-      onClick: () => onAction(kind),
-    }
-  })
+  const items: MenuProps['items'] = actionGroups.map(group => ({
+    type: 'group',
+    label: group.label,
+    children: group.kinds.map(kind => {
+      const meta = actionPresentation(invoice, kind)
+      const reason = actionDisabledReason(invoice, kind)
+      const primary = !reason && primaryActionKind(invoice) === kind
+      return {
+        key: kind,
+        disabled: Boolean(reason),
+        title: reason ?? meta.hint,
+        label: primary ? `${meta.label} · Primary` : meta.label,
+        onClick: () => onAction(kind),
+      }
+    }),
+  }))
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>

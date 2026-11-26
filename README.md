@@ -128,7 +128,7 @@ Remove the disk and do not set `SQLITE_PATH`. SQLite then sits on the instance f
 - **Resolve is not paid.** It leaves the queue with a reason and a note. It does not add cash. See `docs/adr/0002-resolve-is-not-paid.md`.
 - **Partial payments are in scope.** Remaining is invoice amount minus recorded payments. A partial stays in the queue.
 - **Session** is a SQLite row keyed by an HTTP-only cookie. The cookie is set only after the demo sign-in. The row stores the invoice list. Refresh reads it back. Writes use a revision check so two tabs cannot silently overwrite each other.
-- **Grove** is operator-actionable. “Flag details for review” and “Confirm details verified” own invoice accuracy. A follow-up never does.
+- **Grove** is operator-actionable. One details request: flag it, then confirm or cancel it. A follow-up never sets or clears that flag.
 - **Actions are gated** by state on the server, not only in the button. Disabled actions stay on screen with the reason.
 - Narrative of these calls: `docs/decisions.md`. Short sendable summary: `docs/submission-brief.md`.
 
@@ -140,12 +140,12 @@ That workflow does not block a merge by itself. In the GitHub settings for this 
 
 ## What was tested
 
-`npm test` runs 71 Vitest tests in `domain/` and `server/`:
+`npm test` runs 75 Vitest tests in `domain/` and `server/`:
 
 - Seed tiers and Today’s 3 order (Dune, Brook, Grove); P1 backfill only after P0 is gone; Crest is not auto-picked
 - Due-date windows and the queue empty vs all-cleared distinction
 - Status, promise, and priority filters, and column sort
-- Lifecycle matrix, disabled reasons, and `applyChange` boundaries (promise dates, dispute, partial and full payment, resolve ≠ paid, Grove confirm-details)
+- Lifecycle matrix, disabled reasons, and `applyChange` boundaries (one details request, one promise, dispute on a broken promise, partial and full payment, resolve ≠ paid, Grove confirm-details)
 - Demo sign-in (published credentials set the session cookie; a wrong password and an unsigned request do not), HTTP session cookie, reload of the same payload, validation (empty note, bad amount), and the action routes used by the desk
 
 `npm run build` typechecks and builds the client.
@@ -171,9 +171,9 @@ That workflow does not block a merge by itself. In the GitHub settings for this 
 Demo day is 2026-11-26. Start from a fresh session (new browser, or delete `collections.sqlite`). Sign in as `operator` / `demo`, or press **Use demo account**.
 
 1. **Next up** is Dune, Brook, Grove. East and Aster are in the queue as Med. Crest is Low.
-2. **Aster vs Brook.** Open Aster. Primary path is the dispute: update it or route to the account manager. Chase actions are off, with a reason. Open Brook. Primary path is a first follow-up. Brook has no dispute and no prior contact.
+2. **Aster vs Brook.** Open Aster. Primary path is the dispute: update it, cancel it, or route to the account manager. Route to AM is its own action, not a follow-up. Follow-up is still there as contact only. Payment and resolve sit together and stay available. Open Brook. Primary path is a first follow-up. Brook has no dispute and no prior contact.
 3. **Future promise vs broken.** Crest’s promise is two days out. The card reason says to wait, and Crest is not in Next up. Dune’s promise date is in the past. Dune is first, and the drawer says the promise is broken.
-4. **Incomplete follow-up.** Open Grove. The customer claims the details are wrong and that claim is not verified. Confirm details (with a note) or open a dispute. A plain follow-up is not the way to clear that flag. After a real confirm, Grove drops from High.
+4. **Incomplete follow-up.** Open Grove. The customer claims the details are wrong and that claim is not verified. Confirm the open request or cancel it. A second flag is disabled. A plain follow-up does not clear that flag. After a real confirm or cancel, Grove drops from High.
 5. **Paid leaves the queue.** On Brook, record payment for the full remaining amount. Brook leaves the queue and Next up. Paid total rises by $1,800. Open remaining falls by $1,800. A follow-up on another invoice does not move Paid total. Turn on **Show paid** above the queue to see Brook (and any resolved invoices) in the table again. Turn it off to hide them.
 6. **Partial.** On Dune, record a payment smaller than $3,500. Dune stays in the queue with a lower remaining. Paid total rises only by the amount entered.
 7. **Resolve is not paid.** On Crest, resolve with a reason and a note. Crest leaves the queue. Paid total does not change.
@@ -185,7 +185,7 @@ Demo day is 2026-11-26. Start from a fresh session (new browser, or delete `coll
 - [ ] Deployed flow: Render service from this repo, build and start commands as above, `/` returns the desk
 - [ ] Reload: record a payment, refresh, amounts and queue match
 - [ ] Invalid input: follow-up or confirm-details with an empty note is rejected; a payment above remaining is rejected
-- [ ] Rule boundaries: Aster’s chase actions differ from Brook’s; Crest (future promise) differs from Dune (broken); Grove cannot be “cleared” by a follow-up alone; resolve does not increase Paid total; full payment removes the invoice from the queue
+- [ ] Rule boundaries: Aster’s dispute and route-to-AM differ from Brook’s first follow-up; Crest (future promise) differs from Dune (broken); Grove cannot be “cleared” by a follow-up alone; resolve does not increase Paid total; full payment removes the invoice from the queue
 
 ## What remains untested
 
