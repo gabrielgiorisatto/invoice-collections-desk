@@ -50,29 +50,31 @@ export function StatusTag({ kind, label }: { kind: StatusKind; label: string }) 
   )
 }
 
+const cueStyle = { whiteSpace: 'normal' as const, maxWidth: '100%', height: 'auto', lineHeight: 1.35, paddingBlock: 4 }
+
 export function PromiseCue({ label, tone }: { label: string; tone: 'none' | 'active' | 'broken' }) {
   if (tone === 'broken') {
-    return <Tag color="error" icon={<ExclamationCircleOutlined />}>{label}</Tag>
+    return <Tag color="error" icon={<ExclamationCircleOutlined />} style={cueStyle}>{label}</Tag>
   }
   if (tone === 'active') {
-    return <Tag color="success" icon={<CheckCircleOutlined />}>{label}</Tag>
+    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
   }
-  return <Tag>{label}</Tag>
+  return <Tag style={cueStyle}>{label}</Tag>
 }
 
 export function DisputeCue({ label, tone }: { label: string; tone: 'none' | 'open' | 'resolved' }) {
   if (tone === 'open') {
-    return <Tag color="error" icon={<ExclamationCircleOutlined />}>{label}</Tag>
+    return <Tag color="error" icon={<ExclamationCircleOutlined />} style={cueStyle}>{label}</Tag>
   }
   if (tone === 'resolved') {
-    return <Tag color="success" icon={<CheckCircleOutlined />}>{label}</Tag>
+    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
   }
-  return <Tag color="success" icon={<CheckCircleOutlined />}>{label}</Tag>
+  return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
 }
 
 export function AccuracyCue({ label, verified }: { label: string; verified: boolean }) {
   if (verified) {
-    return <Tag color="success" icon={<CheckCircleOutlined />}>{label}</Tag>
+    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
   }
-  return <Tag color="warning" icon={<WarningOutlined />}>{label}</Tag>
+  return <Tag color="warning" icon={<WarningOutlined />} style={cueStyle}>{label}</Tag>
 }

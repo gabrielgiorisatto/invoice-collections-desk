@@ -7,9 +7,9 @@ import { seed, seedInvoiceIds } from './seed.ts'
 const byCode = (invoices: Invoice[], code: string) => invoices.find(item => item.code === code)!
 
 describe('availableActions lifecycle matrix', () => {
-  it('open / never contacted (Brook): follow-up, promise, dispute, verify, payment', () => {
+  it('open / never contacted (Brook): follow-up, flag-details, promise, dispute, payment', () => {
     expect(availableActions(byCode(seed(), 'Brook'))).toEqual([
-      'follow-up', 'promise', 'payment', 'dispute', 'verify-accuracy',
+      'follow-up', 'flag-details', 'promise', 'payment', 'dispute',
     ])
     expect(primaryActionKind(byCode(seed(), 'Brook'))).toBe('follow-up')
   })
@@ -24,9 +24,9 @@ describe('availableActions lifecycle matrix', () => {
     expect(availableActions(byCode(seed(), 'Crest'))).toEqual(['payment', 'resolve'])
   })
 
-  it('unverified (Grove): verify and dispute (+ payment)', () => {
+  it('unverified (Grove): confirm-details and dispute (+ payment)', () => {
     expect(availableActions(byCode(seed(), 'Grove'))).toEqual([
-      'payment', 'dispute', 'verify-accuracy',
+      'confirm-details', 'payment', 'dispute',
     ])
   })
 
@@ -65,6 +65,21 @@ describe('availableActions lifecycle matrix', () => {
     const crest = byCode(seed(), 'Crest')
     expect(actionDisabledReason(crest, 'payment')).toBeNull()
     expect(actionDisabledReason(crest, 'follow-up')).toMatch(/promise is active/i)
-    expect(actionDisplayOrder).toHaveLength(7)
+    expect(actionDisplayOrder).toHaveLength(8)
+  })
+
+  it('follow-up never sets needs verification; flag-details does from zero', () => {
+    const afterFollowUp = applyChange(seed(), seedInvoiceIds.Brook, {
+      type: 'follow-up',
+      value: { note: 'Left voicemail', channel: 'Phone', answered: false },
+    }).invoices
+    expect(byCode(afterFollowUp, 'Brook').invoiceAccuracy).toBe('ok')
+
+    const flagged = applyChange(seed(), seedInvoiceIds.Brook, {
+      type: 'flag-details',
+      value: { note: 'Remittance address looks wrong.' },
+    }).invoices
+    expect(byCode(flagged, 'Brook').invoiceAccuracy).toBe('unverified_claim')
+    expect(byCode(flagged, 'Brook').history?.[0]?.title).toMatch(/flagged/i)
   })
 })

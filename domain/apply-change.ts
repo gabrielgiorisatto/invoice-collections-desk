@@ -123,14 +123,24 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
       next = recordEvent(invoice, next, 'Routed to AM (simulation)', note)
       break
     }
-    case 'verify-accuracy': {
+    case 'flag-details': {
+      const note = change.value.note.trim()
+      if (!note) errors.note = 'Note what needs review.'
+      next = {
+        ...invoice,
+        invoiceAccuracy: 'unverified_claim',
+      }
+      next = recordEvent(invoice, next, 'Details flagged for review', note)
+      break
+    }
+    case 'confirm-details': {
       const note = change.value.note.trim()
       if (!note) errors.note = 'Note what was verified.'
       next = {
         ...invoice,
         invoiceAccuracy: 'ok',
       }
-      next = recordEvent(invoice, next, 'Invoice details verified', note)
+      next = recordEvent(invoice, next, 'Details confirmed verified', note)
       break
     }
     default: {

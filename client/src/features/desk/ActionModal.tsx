@@ -37,6 +37,12 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
       case 'follow-up':
         change = { type: 'follow-up', value: { note: values.note, channel: values.channel, answered: Boolean(values.answered) } }
         break
+      case 'flag-details':
+        change = { type: 'flag-details', value: { note: values.note } }
+        break
+      case 'confirm-details':
+        change = { type: 'confirm-details', value: { note: values.note } }
+        break
       case 'promise':
         change = { type: 'promise', value: { dueDate: values.dueDate, note: values.note } }
         break
@@ -51,9 +57,6 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
         break
       case 'route-am':
         change = { type: 'route-am', value: { note: values.note } }
-        break
-      case 'verify-accuracy':
-        change = { type: 'verify-accuracy', value: { note: values.note } }
         break
       default: {
         const _exhaustive: never = kind
@@ -74,6 +77,11 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
       setSaving(false)
     }
   }
+
+  const noteOnly =
+    kind === 'route-am'
+    || kind === 'flag-details'
+    || kind === 'confirm-details'
 
   return (
     <Modal
@@ -160,7 +168,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
             </Form.Item>
           </>
         ) : null}
-        {kind === 'route-am' || kind === 'verify-accuracy' ? (
+        {noteOnly ? (
           <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
             <Input.TextArea rows={3} />
           </Form.Item>

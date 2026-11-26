@@ -131,9 +131,9 @@ describe('applyChange dispute, AM route, verify (#6)', () => {
     expect(byCode(invoices, 'Aster').ownerRole).toBe('account_manager')
   })
 
-  it('verifies Grove invoice accuracy', () => {
+  it('confirms Grove details verified', () => {
     const { invoices, errors } = applyChange(seed(), seedInvoiceIds.Grove, {
-      type: 'verify-accuracy',
+      type: 'confirm-details',
       value: { note: 'Bank details confirmed with AP.' },
     })
     expect(errors).toEqual({})

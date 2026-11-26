@@ -54,10 +54,10 @@ import {
 import ActionModal from './ActionModal.tsx'
 import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
 import {
-  invoiceAccuracyLabel,
-  invoiceDisputeLabel,
-  invoicePromiseLabel,
+  accuracyDetailPhrase,
+  disputeDetailPhrase,
   ownerLabel,
+  promiseDetailPhrase,
 } from './labels.ts'
 import type { ActionKind } from './primaryAction.ts'
 
@@ -78,13 +78,19 @@ function StateCues({ invoice }: { invoice: Invoice }) {
   const promise = promiseStatus(invoice)
   const dispute = disputeStatus(invoice)
   return (
-    <Space wrap size={[4, 4]}>
-      <PromiseCue label={invoicePromiseLabel(invoice)} tone={promise === 'none' ? 'none' : promise} />
-      <DisputeCue label={invoiceDisputeLabel(invoice)} tone={dispute === 'none' ? 'none' : dispute} />
-      <AccuracyCue
-        label={invoiceAccuracyLabel(invoice)}
-        verified={invoice.invoiceAccuracy === 'ok'}
-      />
+    <Space direction="vertical" size={8} style={{ width: '100%' }}>
+      <div>
+        <PromiseCue label={promiseDetailPhrase(invoice)} tone={promise === 'none' ? 'none' : promise} />
+      </div>
+      <div>
+        <DisputeCue label={disputeDetailPhrase(invoice)} tone={dispute === 'none' ? 'none' : dispute} />
+      </div>
+      <div>
+        <AccuracyCue
+          label={accuracyDetailPhrase(invoice)}
+          verified={invoice.invoiceAccuracy === 'ok'}
+        />
+      </div>
     </Space>
   )
 }
@@ -267,28 +273,29 @@ export default function DeskPage() {
     {
       title: 'Promise',
       key: 'promise',
-      width: 110,
+      width: 200,
       render: (_value, row) => {
         const tone = promiseStatus(row)
-        return <PromiseCue label={invoicePromiseLabel(row)} tone={tone === 'none' ? 'none' : tone} />
+        return <PromiseCue label={promiseDetailPhrase(row)} tone={tone === 'none' ? 'none' : tone} />
       },
     },
     {
       title: 'Dispute',
       key: 'dispute',
-      width: 110,
+      width: 220,
+      ellipsis: true,
       render: (_value, row) => {
         const tone = disputeStatus(row)
-        return <DisputeCue label={invoiceDisputeLabel(row)} tone={tone === 'none' ? 'none' : tone} />
+        return <DisputeCue label={disputeDetailPhrase(row)} tone={tone === 'none' ? 'none' : tone} />
       },
     },
     {
       title: 'Invoice details',
       key: 'accuracy',
-      width: 160,
+      width: 200,
       render: (_value, row) => (
         <AccuracyCue
-          label={invoiceAccuracyLabel(row)}
+          label={accuracyDetailPhrase(row)}
           verified={row.invoiceAccuracy === 'ok'}
         />
       ),
@@ -441,7 +448,7 @@ export default function DeskPage() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1280 }}
+                      scroll={{ x: 1500 }}
                       onRow={record => ({
                         onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },

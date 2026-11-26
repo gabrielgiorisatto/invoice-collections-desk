@@ -40,8 +40,11 @@ function parseChange(input: unknown): Change | undefined {
     case 'route-am':
       if (value && typeof value.note === 'string') return { type: 'route-am', value: { note: value.note } }
       break
-    case 'verify-accuracy':
-      if (value && typeof value.note === 'string') return { type: 'verify-accuracy', value: { note: value.note } }
+    case 'flag-details':
+      if (value && typeof value.note === 'string') return { type: 'flag-details', value: { note: value.note } }
+      break
+    case 'confirm-details':
+      if (value && typeof value.note === 'string') return { type: 'confirm-details', value: { note: value.note } }
       break
   }
 }
