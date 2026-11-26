@@ -110,6 +110,8 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
     || kind === 'flag-details'
     || kind === 'confirm-details'
 
+  const fieldErrors = Object.entries(errors).filter(([key]) => key !== 'form')
+
   return (
     <Modal
       title={catalog.label}
@@ -119,6 +121,8 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
       confirmLoading={saving}
       destroyOnClose
       okText={catalog.confirm}
+      okButtonProps={{ 'aria-label': catalog.confirm }}
+      cancelButtonProps={{ 'aria-label': 'Cancel' }}
     >
       <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
         {catalog.purpose}
@@ -126,15 +130,47 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
       {kind === 'route-am' ? (
         <Alert type="info" showIcon style={{ marginBottom: 12 }} message="Labeled simulation — no live account manager system." />
       ) : null}
-      {errors.form ? <Alert type="error" showIcon style={{ marginBottom: 12 }} message={errors.form} /> : null}
+      <div role="status" aria-live="polite">
+        {errors.form ? (
+          <Alert type="error" showIcon style={{ marginBottom: 12 }} message={errors.form} />
+        ) : null}
+        {fieldErrors.length > 0 ? (
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="Fix the highlighted fields and try again."
+            description={
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {fieldErrors.map(([key, message]) => (
+                  <li key={key}>{message}</li>
+                ))}
+              </ul>
+            }
+          />
+        ) : null}
+      </div>
       <Form form={form} layout="vertical" requiredMark="optional">
         {kind === 'follow-up' ? (
           <>
-            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input.TextArea rows={3} placeholder="What did you do?" />
+            <Form.Item
+              name="note"
+              label="Note"
+              rules={[{ required: true, message: 'Describe the follow-up.' }]}
+              validateStatus={errors.note ? 'error' : undefined}
+              help={errors.note}
+            >
+              <Input.TextArea rows={3} placeholder="What did you do?" aria-required="true" />
             </Form.Item>
-            <Form.Item name="channel" label="Channel (required)" rules={[{ required: true, message: 'Required' }]}>
-              <Select options={[{ value: 'Email' }, { value: 'Phone' }, { value: 'Portal' }]} />
+            <Form.Item
+              name="channel"
+              label="Channel"
+              rules={[{ required: true, message: 'Choose a channel.' }]}
+            >
+              <Select
+                aria-label="Channel"
+                options={[{ value: 'Email' }, { value: 'Phone' }, { value: 'Portal' }]}
+              />
             </Form.Item>
             <Form.Item name="answered" valuePropName="checked" label="Answered">
               <Checkbox>Customer responded</Checkbox>
@@ -143,28 +179,57 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
         ) : null}
         {kind === 'promise' ? (
           <>
-            <Form.Item name="dueDate" label="Promise due date (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.dueDate ? 'error' : undefined} help={errors.dueDate}>
-              <Input type="date" />
+            <Form.Item
+              name="dueDate"
+              label="Promise due date"
+              rules={[{ required: true, message: 'Enter a promise due date.' }]}
+              validateStatus={errors.dueDate ? 'error' : undefined}
+              help={errors.dueDate}
+            >
+              <Input type="date" aria-required="true" aria-label="Promise due date" />
             </Form.Item>
-            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input.TextArea rows={2} />
+            <Form.Item
+              name="note"
+              label="Note"
+              rules={[{ required: true, message: 'Describe the promise.' }]}
+              validateStatus={errors.note ? 'error' : undefined}
+              help={errors.note}
+            >
+              <Input.TextArea rows={2} aria-required="true" />
             </Form.Item>
           </>
         ) : null}
         {kind === 'payment' ? (
           <>
-            <Form.Item name="amount" label="Amount (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.amount ? 'error' : undefined} help={errors.amount}>
-              <InputNumber min={0.01} step={1} style={{ width: '100%' }} />
+            <Form.Item
+              name="amount"
+              label="Amount"
+              rules={[{ required: true, message: 'Enter a payment amount.' }]}
+              validateStatus={errors.amount ? 'error' : undefined}
+              help={errors.amount}
+            >
+              <InputNumber min={0.01} step={1} style={{ width: '100%' }} aria-required="true" aria-label="Payment amount" />
             </Form.Item>
-            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input placeholder="e.g. Wire reference" />
+            <Form.Item
+              name="note"
+              label="Note"
+              rules={[{ required: true, message: 'Add a payment note.' }]}
+              validateStatus={errors.note ? 'error' : undefined}
+              help={errors.note}
+            >
+              <Input placeholder="e.g. Wire reference" aria-required="true" />
             </Form.Item>
           </>
         ) : null}
         {kind === 'resolve' ? (
           <>
-            <Form.Item name="reason" label="Resolution reason (required)" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item
+              name="reason"
+              label="Resolution reason"
+              rules={[{ required: true, message: 'Choose a resolution reason.' }]}
+            >
               <Select
+                aria-label="Resolution reason"
                 options={[
                   { value: 'dispute_closed', label: resolutionReasonLabel('dispute_closed') },
                   { value: 'credit_issued', label: resolutionReasonLabel('credit_issued') },
@@ -172,21 +237,38 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
                 ]}
               />
             </Form.Item>
-            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input.TextArea rows={2} />
+            <Form.Item
+              name="note"
+              label="Note"
+              rules={[{ required: true, message: 'Explain why this is resolved without payment.' }]}
+              validateStatus={errors.note ? 'error' : undefined}
+              help={errors.note}
+            >
+              <Input.TextArea rows={2} aria-required="true" />
             </Form.Item>
           </>
         ) : null}
         {kind === 'dispute' ? (
           <>
-            <Form.Item name="reason" label="Reason (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.reason ? 'error' : undefined} help={errors.reason}>
-              <Input.TextArea rows={2} />
+            <Form.Item
+              name="reason"
+              label="Reason"
+              rules={[{ required: true, message: 'Describe the dispute.' }]}
+              validateStatus={errors.reason ? 'error' : undefined}
+              help={errors.reason}
+            >
+              <Input.TextArea rows={2} aria-required="true" />
             </Form.Item>
             <Form.Item name="evidence" label="Evidence">
-              <Input />
+              <Input aria-label="Evidence" />
             </Form.Item>
-            <Form.Item name="status" label="Dispute status (required)" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item
+              name="status"
+              label="Dispute status"
+              rules={[{ required: true, message: 'Choose a dispute status.' }]}
+            >
               <Select
+                aria-label="Dispute status"
                 options={[
                   { value: 'open', label: disputeLabel('open') },
                   { value: 'resolved', label: disputeLabel('resolved') },
@@ -196,8 +278,14 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
           </>
         ) : null}
         {noteOnly ? (
-          <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-            <Input.TextArea rows={3} />
+          <Form.Item
+            name="note"
+            label="Note"
+            rules={[{ required: true, message: 'Add a note.' }]}
+            validateStatus={errors.note ? 'error' : undefined}
+            help={errors.note}
+          >
+            <Input.TextArea rows={3} aria-required="true" />
           </Form.Item>
         ) : null}
       </Form>
