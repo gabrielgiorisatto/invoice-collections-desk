@@ -26,7 +26,7 @@ if (production) {
   app.use(vite.middlewares)
 }
 
-const server = app.listen(port, () => {
-  console.log(`http://localhost:${port}`)
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`http://0.0.0.0:${port}`)
 })
 server.on('close', () => close())

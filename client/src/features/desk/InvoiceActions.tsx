@@ -1,6 +1,16 @@
 import { Button, Dropdown, Space, Tooltip } from 'antd'
-import { DownOutlined } from '@ant-design/icons'
+import {
+  CalendarOutlined,
+  CheckOutlined,
+  DollarOutlined,
+  DownOutlined,
+  FlagOutlined,
+  MessageOutlined,
+  TeamOutlined,
+  WarningOutlined,
+} from '@ant-design/icons'
 import type { MenuProps } from 'antd'
+import type { ReactNode } from 'react'
 import type { Invoice } from '@domain/index.ts'
 import {
   actionCatalog,
@@ -9,6 +19,31 @@ import {
   primaryActionKind,
   type ActionKind,
 } from './primaryAction.ts'
+
+function actionIcon(kind: ActionKind): ReactNode {
+  switch (kind) {
+    case 'follow-up':
+      return <MessageOutlined />
+    case 'flag-details':
+      return <FlagOutlined />
+    case 'confirm-details':
+      return <CheckOutlined />
+    case 'promise':
+      return <CalendarOutlined />
+    case 'payment':
+      return <DollarOutlined />
+    case 'dispute':
+      return <WarningOutlined />
+    case 'route-am':
+      return <TeamOutlined />
+    case 'resolve':
+      return <CheckOutlined />
+    default: {
+      const _exhaustive: never = kind
+      return _exhaustive
+    }
+  }
+}
 
 type Props = {
   invoice: Invoice
@@ -32,9 +67,9 @@ function ActionButton({
   const button = (
     <Button
       type={primary ? 'primary' : 'default'}
-      danger={kind === 'resolve' && !primary}
       disabled={disabled}
       block
+      icon={actionIcon(kind)}
       aria-label={meta.label}
       aria-describedby={describedBy}
       onClick={() => onAction(kind)}
