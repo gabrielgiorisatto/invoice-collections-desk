@@ -67,6 +67,32 @@ describe('invoices API', () => {
     }
   })
 
+  it('clears the session cookie on sign-out', async () => {
+    const { app, cookie, close } = await sessionApp()
+    try {
+      const logout = await request(app).post('/api/logout').set('Cookie', cookie)
+      expect(logout.status).toBe(200)
+      const cleared = logout.headers['set-cookie']?.[0] ?? ''
+      expect(cleared).toMatch(/collections_demo=;/)
+      expect(cleared).toMatch(/HttpOnly/)
+      expect(cleared).toMatch(/SameSite=Lax/)
+      expect(cleared).toMatch(/Path=\//)
+      expect(cleared).toMatch(/Max-Age=0/)
+      expect(cleared).not.toMatch(/Secure/)
+
+      const after = await request(app).get('/api/session')
+      expect(after.body.authenticated).toBe(false)
+      const desk = await request(app).get('/api/invoices')
+      expect(desk.status).toBe(401)
+
+      const again = await request(app).post('/api/logout')
+      expect(again.status).toBe(200)
+      expect(again.headers['set-cookie']?.[0]).toMatch(/Max-Age=0/)
+    } finally {
+      close()
+    }
+  })
+
   it('persists a follow-up via PATCH on the same session', async () => {
     const { app, cookie, close } = await sessionApp()
     try {

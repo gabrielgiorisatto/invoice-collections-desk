@@ -107,6 +107,11 @@ function demoSessionCookie(id: string, protocol: string): string {
   return `${demoCookieName}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${secure}`
 }
 
+function clearSessionCookie(protocol: string): string {
+  const secure = protocol === 'https:' ? '; Secure' : ''
+  return `${demoCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`
+}
+
 function loginBody(input: unknown): { username: string; password: string } | undefined {
   if (!input || typeof input !== 'object') return
   const body = input as Record<string, unknown>
@@ -137,6 +142,11 @@ export async function handleRequest(request: Request, db: Database) {
       .bind(id, JSON.stringify(seed()))
       .run()
     headers.set('set-cookie', demoSessionCookie(id, url.protocol))
+    return json({ ok: true })
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/logout') {
+    headers.set('set-cookie', clearSessionCookie(url.protocol))
     return json({ ok: true })
   }
 

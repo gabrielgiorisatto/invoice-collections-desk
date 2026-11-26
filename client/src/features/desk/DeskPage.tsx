@@ -31,6 +31,7 @@ import {
   activityTimeline,
   compareQueueColumn,
   dateFilterLabels,
+  demoAccount,
   demoDay,
   describeQueueFilters,
   deskEmptyCopy,
@@ -60,11 +61,11 @@ import {
   type QueueStatusFacet,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
-import { fetchSession } from '../../api/session.ts'
+import { fetchSession, signOut } from '../../api/session.ts'
 import ActionModal from './ActionModal.tsx'
 import BrandMark from './BrandMark.tsx'
 import LoginScreen from './LoginScreen.tsx'
-import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
+import { InvoiceActionButtons } from './InvoiceActions.tsx'
 import {
   detailsStateValue,
   disputeStateValue,
@@ -252,7 +253,17 @@ function useNarrowLayout() {
   return narrow
 }
 
-function SideNav({ nav, onSelect }: { nav: string; onSelect: (key: string) => void }) {
+function SideNav({
+  nav,
+  onSelect,
+  signingOut,
+  onSignOut,
+}: {
+  nav: string
+  onSelect: (key: string) => void
+  signingOut: boolean
+  onSignOut: () => void
+}) {
   return (
     <div className="side-nav">
       <div className="brand">
@@ -270,12 +281,24 @@ function SideNav({ nav, onSelect }: { nav: string; onSelect: (key: string) => vo
           { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
         ]}
       />
-      <div className="sider-foot">Demo {demoDay}</div>
+      <div className="sider-foot">
+        <div className="sider-day">Demo {demoDay}</div>
+        <button
+          type="button"
+          className="sider-user"
+          disabled={signingOut}
+          aria-label={`Sign out ${demoAccount.name}, ${demoAccount.role}`}
+          onClick={onSignOut}
+        >
+          <span className="sider-user-name">{demoAccount.name}</span>
+          <span className="sider-user-role">{demoAccount.role}</span>
+        </button>
+      </div>
     </div>
   )
 }
 
-function DeskWorkspace() {
+function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -285,6 +308,7 @@ function DeskWorkspace() {
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
   const [queueFilters, setQueueFilters] = useState<QueueFilters>(emptyQueueFilters)
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
+  const [signingOut, setSigningOut] = useState(false)
   const narrow = useNarrowLayout()
   const { message } = App.useApp()
 
@@ -351,6 +375,20 @@ function DeskWorkspace() {
     setActionTarget({ id: invoiceId, kind })
   }
 
+  async function signOutOfDesk() {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      const cleared = await signOut()
+      if (cleared) onSignedOut()
+      else setError('Could not sign out.')
+    } catch {
+      setError('Could not sign out.')
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   function applyDeskUpdate(next: Invoice[]) {
     // Replace session snapshot so Next up + queue re-sort by priority tiers.
     setInvoices(next)
@@ -413,18 +451,6 @@ function DeskWorkspace() {
       sorter: (a, b) => compareQueueColumn(a, b, 'details'),
       render: (_value, row) => <GlancePill label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
     },
-    {
-      title: '',
-      key: 'actions',
-      width: 108,
-      fixed: 'right',
-      render: (_value, row) => (
-        <InvoiceRowMenu
-          invoice={row}
-          onAction={kind => openAction(row.id, kind)}
-        />
-      ),
-    },
   ]
 
   const onGuide = nav === 'guide'
@@ -443,6 +469,8 @@ function DeskWorkspace() {
         >
           <SideNav
             nav={nav}
+            signingOut={signingOut}
+            onSignOut={() => { void signOutOfDesk() }}
             onSelect={key => {
               setNav(key)
               setNavOpen(false)
@@ -451,7 +479,12 @@ function DeskWorkspace() {
         </Drawer>
       ) : (
         <Sider width={220} theme="light" trigger={null} className="desk-sider">
-          <SideNav nav={nav} onSelect={setNav} />
+          <SideNav
+            nav={nav}
+            signingOut={signingOut}
+            onSignOut={() => { void signOutOfDesk() }}
+            onSelect={setNav}
+          />
         </Sider>
       )}
 
@@ -673,7 +706,7 @@ function DeskWorkspace() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1080 }}
+                      scroll={{ x: 972 }}
                       showSorterTooltip={{ target: 'sorter-icon' }}
                       rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
@@ -785,5 +818,5 @@ export default function DeskPage() {
     )
   }
   if (!authed) return <LoginScreen onSignedIn={() => setAuthed(true)} />
-  return <DeskWorkspace />
+  return <DeskWorkspace onSignedOut={() => setAuthed(false)} />
 }

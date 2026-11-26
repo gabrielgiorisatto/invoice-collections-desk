@@ -127,7 +127,7 @@ Remove the disk and do not set `SQLITE_PATH`. SQLite then sits on the instance f
 - **Priority is P0–P3**, from typed enums, not points and not a pay-likelihood score. Today’s three are filled from P0 in a fixed order (broken promise, then never contacted, then unverified details), then P1 only if a P0 slot is empty. Crest (active promise) is P2 and is not auto-picked. See `docs/adr/0001-priority-tiers-not-points.md`.
 - **Resolve is not paid.** It leaves the queue with a reason and a note. It does not add cash. See `docs/adr/0002-resolve-is-not-paid.md`.
 - **Partial payments are in scope.** Remaining is invoice amount minus recorded payments. A partial stays in the queue.
-- **Session** is a SQLite row keyed by an HTTP-only cookie. The cookie is set only after the demo sign-in. The row stores the invoice list. Refresh reads it back. Writes use a revision check so two tabs cannot silently overwrite each other.
+- **Session** is a SQLite row keyed by an HTTP-only cookie. The cookie is set only after the demo sign-in, and signing out clears it. The row stores the invoice list. Refresh reads it back. Writes use a revision check so two tabs cannot silently overwrite each other.
 - **Grove** is operator-actionable. One details request: flag it, then confirm or cancel it. A follow-up never sets or clears that flag.
 - **Actions are gated** by state on the server, not only in the button. Disabled actions stay on screen with the reason.
 - Narrative of these calls: `docs/decisions.md`. Short sendable summary: `docs/submission-brief.md`.
@@ -140,13 +140,13 @@ That workflow does not block a merge by itself. In the GitHub settings for this 
 
 ## What was tested
 
-`npm test` runs 75 Vitest tests in `domain/` and `server/`:
+`npm test` runs 76 Vitest tests in `domain/` and `server/`:
 
 - Seed tiers and Today’s 3 order (Dune, Brook, Grove); P1 backfill only after P0 is gone; Crest is not auto-picked
 - Due-date windows and the queue empty vs all-cleared distinction
 - Status, promise, and priority filters, and column sort
 - Lifecycle matrix, disabled reasons, and `applyChange` boundaries (one details request, one promise, dispute on a broken promise, partial and full payment, resolve ≠ paid, Grove confirm-details)
-- Demo sign-in (published credentials set the session cookie; a wrong password and an unsigned request do not), HTTP session cookie, reload of the same payload, validation (empty note, bad amount), and the action routes used by the desk
+- Demo sign-in (published credentials set the session cookie; a wrong password and an unsigned request do not) and sign-out (the cookie is cleared), HTTP session cookie, reload of the same payload, validation (empty note, bad amount), and the action routes used by the desk
 
 `npm run build` typechecks and builds the client.
 

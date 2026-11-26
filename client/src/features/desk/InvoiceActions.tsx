@@ -1,16 +1,14 @@
-import { Button, Dropdown, Space, Tooltip } from 'antd'
+import { Button, Space, Tooltip } from 'antd'
 import {
   CalendarOutlined,
   CheckOutlined,
   CloseOutlined,
   DollarOutlined,
-  DownOutlined,
   FlagOutlined,
   MessageOutlined,
   TeamOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
 import type { Invoice } from '@domain/index.ts'
 import {
@@ -121,37 +119,5 @@ export function InvoiceActionButtons({ invoice, onAction }: Props) {
         </section>
       ))}
     </div>
-  )
-}
-
-export function InvoiceRowMenu({ invoice, onAction }: Props) {
-  const items: MenuProps['items'] = actionGroups.map(group => ({
-    type: 'group',
-    label: group.label,
-    children: group.kinds.map(kind => {
-      const meta = actionPresentation(invoice, kind)
-      const reason = actionDisabledReason(invoice, kind)
-      const primary = !reason && primaryActionKind(invoice) === kind
-      return {
-        key: kind,
-        disabled: Boolean(reason),
-        title: reason ?? meta.hint,
-        label: primary ? `${meta.label} · Primary` : meta.label,
-        onClick: () => onAction(kind),
-      }
-    }),
-  }))
-
-  return (
-    <Dropdown menu={{ items }} trigger={['click']}>
-      <Button
-        size="small"
-        aria-label={`Actions for ${invoice.code}`}
-        onClick={event => event.stopPropagation()}
-        onKeyDown={event => event.stopPropagation()}
-      >
-        Actions <DownOutlined aria-hidden />
-      </Button>
-    </Dropdown>
   )
 }
