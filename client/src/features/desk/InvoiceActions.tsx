@@ -13,8 +13,6 @@ import {
 type Props = {
   invoice: Invoice
   onAction: (kind: ActionKind) => void
-  layout?: 'buttons' | 'dropdown'
-  onDetails?: () => void
 }
 
 function ActionButton({
@@ -55,7 +53,7 @@ function ActionButton({
   )
 }
 
-export function InvoiceActionButtons({ invoice, onAction }: Omit<Props, 'layout' | 'onDetails'>) {
+export function InvoiceActionButtons({ invoice, onAction }: Props) {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={10}>
       {actionDisplayOrder.map(kind => (
@@ -65,28 +63,19 @@ export function InvoiceActionButtons({ invoice, onAction }: Omit<Props, 'layout'
   )
 }
 
-export function InvoiceRowMenu({ invoice, onAction, onDetails }: Props) {
-  const items: MenuProps['items'] = [
-    {
-      key: 'actions',
-      label: 'Actions',
-      children: actionDisplayOrder.map(kind => {
-        const meta = actionCatalog[kind]
-        const reason = actionDisabledReason(invoice, kind)
-        const primary = !reason && primaryActionKind(invoice) === kind
-        return {
-          key: kind,
-          disabled: Boolean(reason),
-          title: reason ?? meta.hint,
-          label: primary ? `${meta.label} · Primary` : meta.label,
-          onClick: () => onAction(kind),
-        }
-      }),
-    },
-    ...(onDetails
-      ? [{ key: 'details', label: 'Details', onClick: () => onDetails() }]
-      : []),
-  ]
+export function InvoiceRowMenu({ invoice, onAction }: Props) {
+  const items: MenuProps['items'] = actionDisplayOrder.map(kind => {
+    const meta = actionCatalog[kind]
+    const reason = actionDisabledReason(invoice, kind)
+    const primary = !reason && primaryActionKind(invoice) === kind
+    return {
+      key: kind,
+      disabled: Boolean(reason),
+      title: reason ?? meta.hint,
+      label: primary ? `${meta.label} · Primary` : meta.label,
+      onClick: () => onAction(kind),
+    }
+  })
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>

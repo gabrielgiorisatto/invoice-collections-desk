@@ -127,7 +127,6 @@ function InvoiceDetailPanel({
 export default function DeskPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [drawerId, setDrawerId] = useState<string | null>(null)
-  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
@@ -250,7 +249,6 @@ export default function DeskPage() {
         <InvoiceRowMenu
           invoice={row}
           onAction={kind => openAction(row.id, kind)}
-          onDetails={() => setDrawerId(row.id)}
         />
       ),
     },
@@ -344,10 +342,7 @@ export default function DeskPage() {
                                 key={invoice.id}
                                 type="button"
                                 className="today-card"
-                                onClick={() => {
-                                  setExpandedRowKeys([invoice.id])
-                                  setDrawerId(null)
-                                }}
+                                onClick={() => setDrawerId(invoice.id)}
                               >
                                 <span style={{ minWidth: 0, width: '100%' }}>
                                   <Space size={8} wrap>
@@ -381,16 +376,10 @@ export default function DeskPage() {
                       dataSource={queue}
                       columns={columns}
                       scroll={{ x: 1100 }}
-                      expandable={{
-                        expandedRowKeys,
-                        onExpandedRowsChange: keys => setExpandedRowKeys(keys as string[]),
-                        expandedRowRender: record => (
-                          <InvoiceDetailPanel
-                            invoice={record}
-                            onAction={kind => openAction(record.id, kind)}
-                          />
-                        ),
-                      }}
+                      onRow={record => ({
+                        onClick: () => setDrawerId(record.id),
+                        style: { cursor: 'pointer' },
+                      })}
                       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Queue empty" /> }}
                     />
                   </section>
