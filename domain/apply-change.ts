@@ -7,25 +7,34 @@ import {
   type InvoiceEvent,
   type ResolutionReason,
 } from './model.ts'
+import { synthesizeActivity } from './activity.ts'
 import { availableActions } from './lifecycle.ts'
 import { inActiveQueue, remaining, validDate } from './rules.ts'
 
 const resolutionReasons: ResolutionReason[] = ['dispute_closed', 'credit_issued', 'other']
 
-function recordEvent(invoice: Invoice, title: string, detail = ''): Invoice {
+const resolutionLabels: Record<ResolutionReason, string> = {
+  dispute_closed: 'Dispute closed',
+  credit_issued: 'Credit issued',
+  other: 'Other',
+}
+
+/** Prepend an activity entry. Prior timeline comes from `base` (pre-change) so new fields are not double-counted. */
+function recordEvent(base: Invoice, mutated: Invoice, title: string, detail = ''): Invoice {
   const event: InvoiceEvent = {
     id: crypto.randomUUID(),
-    at: new Date().toISOString(),
+    at: demoDay,
     title,
     detail: detail.length > 240 ? `${detail.slice(0, 239)}…` : detail,
   }
-  return { ...invoice, history: [event, ...(invoice.history ?? [])].slice(0, historyLimit) }
+  const prior = base.history ?? synthesizeActivity(base)
+  return { ...mutated, history: [event, ...prior].slice(0, historyLimit) }
 }
 
 export function applyChange(invoices: Invoice[], key: string, change: Change) {
   const invoice = invoices.find(item => invoiceKey(item) === key)
   if (!invoice) return { invoices, errors: { form: 'Invoice not found.' } }
-if (!inActiveQueue(invoice)) {
+  if (!inActiveQueue(invoice)) {
     return { invoices, errors: { form: 'Invoice is out of the active queue.' } }
   }
   if (!availableActions(invoice).includes(change.type)) {
@@ -48,7 +57,7 @@ if (!inActiveQueue(invoice)) {
           ...invoice.followUps,
         ],
       }
-      next = recordEvent(next, 'Follow-up recorded', `${channel} · ${note}`)
+      next = recordEvent(invoice, next, 'Follow-up recorded', `${channel} · ${note}`)
       break
     }
     case 'promise': {
@@ -60,7 +69,7 @@ if (!inActiveQueue(invoice)) {
         ...invoice,
         promise: { dueDate, note, recordedAt: demoDay },
       }
-      next = recordEvent(next, 'Promise recorded', `Due ${dueDate} · ${note}`)
+      next = recordEvent(invoice, next, 'Promise recorded', `Due ${dueDate} · ${note}`)
       break
     }
     case 'payment': {
@@ -75,19 +84,19 @@ if (!inActiveQueue(invoice)) {
         payments: [...invoice.payments, { at: demoDay, amount, note }],
         promise: amount >= left ? undefined : invoice.promise,
       }
-      next = recordEvent(next, 'Payment received', `${amount} · ${note}`)
+      next = recordEvent(invoice, next, 'Payment received', `${amount} · ${note}`)
       break
     }
     case 'resolve': {
       const note = change.value.note.trim()
       const reason = change.value.reason
-      if (!resolutionReasons.includes(reason)) errors.reason = 'Choose a ResolutionReason.'
+      if (!resolutionReasons.includes(reason)) errors.reason = 'Choose a resolution reason.'
       if (!note) errors.note = 'Add a short resolve note.'
       next = {
         ...invoice,
         resolved: { reason, note, at: demoDay },
       }
-      next = recordEvent(next, 'Resolved (not paid)', `${reason} · ${note}`)
+      next = recordEvent(invoice, next, 'Resolved (not paid)', `${resolutionLabels[reason]} · ${note}`)
       break
     }
     case 'dispute': {
@@ -101,7 +110,7 @@ if (!inActiveQueue(invoice)) {
         ...invoice,
         dispute: { reason, evidence, status: change.value.status },
       }
-      next = recordEvent(next, change.value.status === 'open' ? 'Dispute opened' : 'Dispute updated', reason)
+      next = recordEvent(invoice, next, change.value.status === 'open' ? 'Dispute opened' : 'Dispute updated', reason)
       break
     }
     case 'route-am': {
@@ -111,7 +120,7 @@ if (!inActiveQueue(invoice)) {
         ...invoice,
         ownerRole: 'account_manager',
       }
-      next = recordEvent(next, 'Routed to AM (simulation)', note)
+      next = recordEvent(invoice, next, 'Routed to AM (simulation)', note)
       break
     }
     case 'verify-accuracy': {
@@ -121,7 +130,7 @@ if (!inActiveQueue(invoice)) {
         ...invoice,
         invoiceAccuracy: 'ok',
       }
-      next = recordEvent(next, 'Invoice details verified', note)
+      next = recordEvent(invoice, next, 'Invoice details verified', note)
       break
     }
     default: {

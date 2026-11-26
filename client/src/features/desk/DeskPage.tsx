@@ -10,6 +10,7 @@ import {
   Space,
   Spin,
   Table,
+  Timeline,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -21,9 +22,11 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import {
+  activityTimeline,
   demoDay,
   disputeStatus,
   explainPriority,
+  formatDueDate,
   inActiveQueue,
   morningCapacity,
   overdueDays,
@@ -37,7 +40,13 @@ import {
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 import { invoiceStatus } from './status.ts'
-import { PriorityTag, StatusTag } from './tags.tsx'
+import {
+  AccuracyCue,
+  DisputeCue,
+  PriorityTag,
+  PromiseCue,
+  StatusTag,
+} from './tags.tsx'
 import ActionModal from './ActionModal.tsx'
 import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
 import {
@@ -61,6 +70,48 @@ function money(amount: number) {
   }).format(amount)
 }
 
+function StateCues({ invoice }: { invoice: Invoice }) {
+  const promise = promiseStatus(invoice)
+  const dispute = disputeStatus(invoice)
+  return (
+    <Space wrap size={[4, 4]}>
+      <PromiseCue label={invoicePromiseLabel(invoice)} tone={promise === 'none' ? 'none' : promise} />
+      <DisputeCue label={invoiceDisputeLabel(invoice)} tone={dispute === 'none' ? 'none' : dispute} />
+      <AccuracyCue
+        label={invoiceAccuracyLabel(invoice)}
+        verified={invoice.invoiceAccuracy === 'ok'}
+      />
+    </Space>
+  )
+}
+
+function ActivitySection({ invoice }: { invoice: Invoice }) {
+  const items = activityTimeline(invoice)
+  return (
+    <div style={{ marginTop: 16 }}>
+      <Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>Activity</Title>
+      {items.length === 0 ? (
+        <Text type="secondary">No recorded actions yet.</Text>
+      ) : (
+        <Timeline
+          items={items.map(entry => ({
+            key: entry.id,
+            children: (
+              <div>
+                <Text type="secondary">{entry.at.slice(0, 10)}</Text>
+                <div>
+                  <Text strong>{entry.title}</Text>
+                </div>
+                {entry.detail ? <Text type="secondary">{entry.detail}</Text> : null}
+              </div>
+            ),
+          }))}
+        />
+      )}
+    </div>
+  )
+}
+
 function InvoiceDetailPanel({
   invoice,
   onAction,
@@ -71,10 +122,13 @@ function InvoiceDetailPanel({
   return (
     <div className="row-expand">
       <Text type="secondary">{explainPriority(invoice).reason}</Text>
+      <div style={{ marginTop: 12, marginBottom: 12 }}>
+        <StateCues invoice={invoice} />
+      </div>
       <Descriptions
         size="small"
-        column={2}
-        style={{ marginTop: 12, marginBottom: 16 }}
+        column={1}
+        style={{ marginBottom: 16 }}
         items={[
           {
             key: 'remaining',
@@ -82,24 +136,9 @@ function InvoiceDetailPanel({
             children: `${money(remaining(invoice))} of ${money(invoice.amount)}`,
           },
           {
-            key: 'overdue',
-            label: 'Overdue',
-            children: `${overdueDays(invoice)} days`,
-          },
-          {
-            key: 'promise',
-            label: 'Promise',
-            children: invoicePromiseLabel(invoice),
-          },
-          {
-            key: 'dispute',
-            label: 'Dispute',
-            children: invoiceDisputeLabel(invoice),
-          },
-          {
-            key: 'accuracy',
-            label: 'Invoice details',
-            children: invoiceAccuracyLabel(invoice),
+            key: 'due',
+            label: 'Due',
+            children: formatDueDate(invoice),
           },
           {
             key: 'owner',
@@ -120,6 +159,7 @@ function InvoiceDetailPanel({
       />
       <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>Actions</Title>
       <InvoiceActionButtons invoice={invoice} onAction={onAction} />
+      <ActivitySection invoice={invoice} />
     </div>
   )
 }
@@ -202,21 +242,21 @@ export default function DeskPage() {
       render: (_value, row) => <Text>{money(remaining(row))}</Text>,
     },
     {
-      title: 'Overdue',
-      key: 'overdue',
-      width: 88,
-      render: (_value, row) => <Text>{`${overdueDays(row)}d`}</Text>,
+      title: 'Due',
+      key: 'due',
+      width: 180,
+      render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 88,
+      width: 72,
       render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
-      width: 150,
+      width: 168,
       render: (_value, row) => {
         const status = invoiceStatus(row)
         return <StatusTag kind={status.kind} label={status.label} />
@@ -225,20 +265,31 @@ export default function DeskPage() {
     {
       title: 'Promise',
       key: 'promise',
-      width: 96,
-      render: (_value, row) => <Text>{invoicePromiseLabel(row)}</Text>,
+      width: 110,
+      render: (_value, row) => {
+        const tone = promiseStatus(row)
+        return <PromiseCue label={invoicePromiseLabel(row)} tone={tone === 'none' ? 'none' : tone} />
+      },
     },
     {
       title: 'Dispute',
       key: 'dispute',
-      width: 96,
-      render: (_value, row) => <Text>{invoiceDisputeLabel(row)}</Text>,
+      width: 110,
+      render: (_value, row) => {
+        const tone = disputeStatus(row)
+        return <DisputeCue label={invoiceDisputeLabel(row)} tone={tone === 'none' ? 'none' : tone} />
+      },
     },
     {
       title: 'Invoice details',
       key: 'accuracy',
-      width: 140,
-      render: (_value, row) => <Text>{invoiceAccuracyLabel(row)}</Text>,
+      width: 160,
+      render: (_value, row) => (
+        <AccuracyCue
+          label={invoiceAccuracyLabel(row)}
+          verified={row.invoiceAccuracy === 'ok'}
+        />
+      ),
     },
     {
       title: '',
@@ -375,7 +426,7 @@ export default function DeskPage() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1100 }}
+                      scroll={{ x: 1280 }}
                       onRow={record => ({
                         onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },
@@ -394,7 +445,7 @@ export default function DeskPage() {
         title={drawerInvoice ? drawerInvoice.code : 'Invoice'}
         open={Boolean(drawerInvoice)}
         onClose={() => setDrawerId(null)}
-        width={420}
+        width={440}
         destroyOnClose
       >
         {drawerInvoice ? (

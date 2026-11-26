@@ -22,6 +22,13 @@ export function overdueDays(invoice: Invoice) {
   return Math.max(0, daysBetween(invoice.dueDate, demoDay))
 }
 
+/** Exact due date; when overdue, append days in parentheses. */
+export function formatDueDate(invoice: Invoice): string {
+  const days = overdueDays(invoice)
+  if (days <= 0) return invoice.dueDate
+  return `${invoice.dueDate} (${days}d overdue)`
+}
+
 export function remaining(invoice: Invoice) {
   const paid = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0)
   return Math.max(0, invoice.amount - paid)
