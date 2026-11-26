@@ -65,3 +65,13 @@ export type Invoice = {
 }
 
 export const invoiceKey = (invoice: Invoice) => invoice.id
+
+export type Change =
+  | { type: 'follow-up'; value: { note: string; channel: string; answered: boolean } }
+  | { type: 'flag-details'; value: { note: string } }
+  | { type: 'confirm-details'; value: { note: string } }
+  | { type: 'promise'; value: { dueDate: string; note: string } }
+  | { type: 'payment'; value: { amount: number; note: string } }
+  | { type: 'dispute'; value: { reason: string; evidence: string; status: 'open' | 'resolved' } }
+  | { type: 'route-am'; value: { note: string } }
+  | { type: 'resolve'; value: { reason: ResolutionReason; note: string } }

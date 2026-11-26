@@ -37,7 +37,7 @@ Commercial / quantity dispute state: `none`, `open`, or `resolved`.
 _Avoid_: Claim (use **InvoiceAccuracy** for accuracy claims), ticket
 
 **InvoiceAccuracy**:
-Whether invoice details are trusted for chase: `ok` or `unverified_claim` (customer says details are wrong; not yet verified).
+Whether invoice details are trusted for chase: `ok` (verified) or `unverified_claim` (needs verification). Set only by **Flag details for review** / **Confirm details verified** — never by follow-up.
 _Avoid_: Incomplete info, data quality
 
 **OwnerRole**:
@@ -45,7 +45,7 @@ Who owns the next action: `operator` (finance operator) or `account_manager` (si
 _Avoid_: Assignee, owner (alone)
 
 **ActionKind**:
-The kind of operator action recorded on an **Invoice**: follow-up, dated promise, dispute update, route to account manager, verify accuracy, payment received (full or partial), or **Resolve**.
+Operator verbs that change invoice state and append history: follow-up (contact note only), flag details for review, confirm details verified, record promise, record payment, open or update dispute, route to account manager, or **Resolve** without payment. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
 _Avoid_: Event, mutation, update
 
 ### Morning focus

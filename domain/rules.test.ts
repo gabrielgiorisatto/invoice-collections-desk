@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { demoDay, morningCapacity, priorityTier, todaysThree, type Invoice } from './index.ts'
+import { demoDay, formatDueDate, morningCapacity, priorityTier, todaysThree, type Invoice } from './index.ts'
 import { seed, seedInvoiceIds } from './seed.ts'
 
 const byCode = (invoices: Invoice[], code: string) => invoices.find(item => item.code === code)!
@@ -46,5 +46,12 @@ describe('P3 settled invoices', () => {
     )
     expect(priorityTier(byCode(invoices, 'Brook'))).toBe('P3')
     expect(todaysThree(invoices).map(invoice => invoice.code)).toEqual(['Dune', 'Grove', 'Aster'])
+  })
+})
+
+describe('formatDueDate', () => {
+  it('shows exact date with overdue days in parentheses', () => {
+    const aster = byCode(seed(), 'Aster')
+    expect(formatDueDate(aster)).toBe(`${aster.dueDate} (45d overdue)`)
   })
 })

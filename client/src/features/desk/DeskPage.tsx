@@ -1,45 +1,67 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
+  App,
   Descriptions,
   Drawer,
   Empty,
   Layout,
   Menu,
+  Segmented,
+  Space,
   Spin,
   Table,
+  Timeline,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
-  AlertOutlined,
   BookOutlined,
-  ClockCircleOutlined,
   DashboardOutlined,
-  ExclamationCircleOutlined,
-  FileSearchOutlined,
-  UnorderedListOutlined,
-  WarningOutlined,
+  FlagOutlined,
 } from '@ant-design/icons'
 import {
+  activityTimeline,
+  dateFilterLabels,
   demoDay,
   disputeStatus,
   explainPriority,
-  inActiveQueue,
+  filterByDueWindow,
+  formatDueDate,
   morningCapacity,
+  openRemainingTotal,
   overdueDays,
+  paidTotal,
   priorityTier,
   promiseStatus,
   remaining,
   todaysThree,
+  totalFollowUps,
+  type DateFilterPreset,
   type Invoice,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
-import { invoiceStatusLabel } from './status.ts'
-import { PriorityTag, StatusTag } from './tags.tsx'
+import ActionModal from './ActionModal.tsx'
+import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
+import {
+  detailsStateValue,
+  disputeStateValue,
+  ownerLabel,
+  primaryStatusLine,
+  promiseStateValue,
+} from './labels.ts'
+import {
+  glanceDetails,
+  glanceDispute,
+  glancePriority,
+  glancePromise,
+  glanceStatus,
+  priorityRowClass,
+} from './tableGlance.ts'
+import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
-const { Text } = Typography
+const { Title, Text } = Typography
 
 const tierOrder = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
 
@@ -51,21 +73,109 @@ function money(amount: number) {
   }).format(amount)
 }
 
+function paidAmount(invoice: Invoice) {
+  return invoice.amount - remaining(invoice)
+}
 
-function pickIcon(invoice: Invoice) {
-  const promise = promiseStatus(invoice)
-  if (promise === 'broken') return { Icon: WarningOutlined, tone: 'warn' as const }
-  if (disputeStatus(invoice) === 'open') return { Icon: AlertOutlined, tone: 'danger' as const }
-  if (invoice.invoiceAccuracy === 'unverified_claim') return { Icon: FileSearchOutlined, tone: 'warn' as const }
-  if (promise === 'active') return { Icon: ClockCircleOutlined, tone: 'default' as const }
-  return { Icon: ExclamationCircleOutlined, tone: 'default' as const }
+function InvoiceIdentity({ code, customer }: { code: string; customer: string }) {
+  return (
+    <div className="invoice-identity">
+      <span className="invoice-code">{code}</span>
+      <span className="invoice-customer">{customer}</span>
+    </div>
+  )
+}
+
+function ActivitySection({ invoice }: { invoice: Invoice }) {
+  const items = activityTimeline(invoice)
+  return (
+    <div style={{ marginTop: 16 }}>
+      <Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>Activity</Title>
+      {items.length === 0 ? (
+        <Text type="secondary">No recorded actions yet.</Text>
+      ) : (
+        <Timeline
+          items={items.map(entry => ({
+            key: entry.id,
+            children: (
+              <div>
+                <Text type="secondary">{entry.at.slice(0, 10)}</Text>
+                <div>
+                  <Text strong>{entry.title}</Text>
+                </div>
+                {entry.detail ? <Text type="secondary">{entry.detail}</Text> : null}
+              </div>
+            ),
+          }))}
+        />
+      )}
+    </div>
+  )
+}
+
+function InvoiceDetailPanel({
+  invoice,
+  onAction,
+}: {
+  invoice: Invoice
+  onAction: (kind: ActionKind) => void
+}) {
+  const followUpCount = invoice.followUps.length
+  return (
+    <div className="drawer-detail">
+      <Text className="drawer-status-line">{primaryStatusLine(invoice)}</Text>
+
+      <div className="drawer-amount-block">
+        <Text type="secondary" className="drawer-field-label">Paid</Text>
+        <div className="drawer-paid-amount">
+          {money(paidAmount(invoice))} of {money(invoice.amount)}
+        </div>
+      </div>
+
+      <div className="drawer-due-block">
+        <Text type="secondary" className="drawer-field-label">Due</Text>
+        <div>{formatDueDate(invoice)}</div>
+      </div>
+
+      <div className="drawer-state-block">
+        <Text type="secondary" className="drawer-field-label">State</Text>
+        <Descriptions
+          size="small"
+          column={1}
+          className="drawer-state-desc"
+          items={[
+            { key: 'promise', label: 'Promise', children: promiseStateValue(invoice) },
+            { key: 'dispute', label: 'Dispute', children: disputeStateValue(invoice) },
+            { key: 'details', label: 'Details', children: detailsStateValue(invoice) },
+          ]}
+        />
+      </div>
+
+      <Text type="secondary" className="drawer-meta">
+        {ownerLabel(invoice.ownerRole)}
+        {' · '}
+        {invoice.accountManager}
+        {' · '}
+        {followUpCount === 0
+          ? 'No follow-ups'
+          : `${followUpCount} follow-up${followUpCount === 1 ? '' : 's'}`}
+      </Text>
+
+      <Title level={5} style={{ marginTop: 20, marginBottom: 8 }}>Actions</Title>
+      <InvoiceActionButtons invoice={invoice} onAction={onAction} />
+      <ActivitySection invoice={invoice} />
+    </div>
+  )
 }
 
 export default function DeskPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [drawerId, setDrawerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
+  const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
+  const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
+  const { message } = App.useApp()
 
   useEffect(() => {
     let alive = true
@@ -82,70 +192,104 @@ export default function DeskPage() {
     }
   }, [])
 
-  const picks = useMemo(() => (invoices ? todaysThree(invoices) : []), [invoices])
+  const filtered = useMemo(
+    () => (invoices ? filterByDueWindow(invoices, dateFilter) : []),
+    [invoices, dateFilter],
+  )
+  const picks = useMemo(() => todaysThree(filtered), [filtered])
   const queue = useMemo(() => {
-    if (!invoices) return []
-    return [...invoices].sort(
+    return [...filtered].sort(
       (a, b) =>
         tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
         || remaining(b) - remaining(a)
         || overdueDays(b) - overdueDays(a),
     )
-  }, [invoices])
-  const selected = invoices?.find(item => item.id === selectedId) ?? null
+  }, [filtered])
+  const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
+  const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
 
   const kpis = useMemo(() => {
-    if (!invoices) {
-      return { openRemaining: 0, todayCount: 0, broken: 0, disputed: 0 }
-    }
-    const active = invoices.filter(inActiveQueue)
     return {
-      openRemaining: active
-        .filter(item => disputeStatus(item) !== 'open')
-        .reduce((sum, item) => sum + remaining(item), 0),
-      todayCount: todaysThree(invoices).length,
-      broken: active.filter(item => promiseStatus(item) === 'broken').length,
-      disputed: active.filter(item => disputeStatus(item) === 'open').length,
+      openRemaining: openRemainingTotal(filtered),
+      paid: paidTotal(filtered),
+      broken: filtered.filter(item => promiseStatus(item) === 'broken').length,
+      disputed: filtered.filter(item => disputeStatus(item) === 'open').length,
     }
-  }, [invoices])
+  }, [filtered])
+
+  function openAction(invoiceId: string, kind: ActionKind) {
+    setActionTarget({ id: invoiceId, kind })
+  }
+
+  function applyDeskUpdate(next: Invoice[]) {
+    // Replace session snapshot so Next up + queue re-sort by priority tiers.
+    setInvoices(next)
+  }
 
   const columns: ColumnsType<Invoice> = [
     {
       title: 'Invoice',
       key: 'invoice',
-      render: (_value, row) => (
-        <>
-          <div><Text strong>{row.code}</Text></div>
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.customer}</Text>
-        </>
-      ),
+      render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
     },
     {
       title: 'Remaining',
       key: 'remaining',
       align: 'right',
-      width: 120,
-      render: (_value, row) => money(remaining(row)),
+      width: 100,
+      render: (_value, row) => <Text>{money(remaining(row))}</Text>,
     },
     {
-      title: 'Overdue',
-      key: 'overdue',
-      width: 90,
-      render: (_value, row) => `${overdueDays(row)}d`,
+      title: 'Due',
+      key: 'due',
+      width: 150,
+      render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 80,
-      render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
+      width: 64,
+      render: (_value, row) => <Text>{glancePriority(priorityTier(row))}</Text>,
     },
     {
       title: 'Status',
       key: 'status',
-      width: 140,
-      render: (_value, row) => <StatusTag label={invoiceStatusLabel(row)} />,
+      width: 100,
+      render: (_value, row) => <Text>{glanceStatus(row)}</Text>,
+    },
+    {
+      title: 'Promise',
+      key: 'promise',
+      width: 72,
+      render: (_value, row) => <Text>{glancePromise(row)}</Text>,
+    },
+    {
+      title: 'Dispute',
+      key: 'dispute',
+      width: 72,
+      render: (_value, row) => <Text>{glanceDispute(row)}</Text>,
+    },
+    {
+      title: 'Details',
+      key: 'details',
+      width: 92,
+      render: (_value, row) => <Text>{glanceDetails(row)}</Text>,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 108,
+      fixed: 'right',
+      render: (_value, row) => (
+        <InvoiceRowMenu
+          invoice={row}
+          onAction={kind => openAction(row.id, kind)}
+        />
+      ),
     },
   ]
+
+  const pageTitle = nav === 'guide' ? 'Guide' : 'Desk'
 
   return (
     <Layout style={{ minHeight: '100%' }}>
@@ -161,12 +305,11 @@ export default function DeskPage() {
           style={{ borderInlineEnd: 0, padding: '12px 8px' }}
           items={[
             { key: 'desk', icon: <DashboardOutlined />, label: 'Desk' },
-            { key: 'queue', icon: <UnorderedListOutlined />, label: 'Queue' },
             { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
           ]}
         />
-        <div style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
-          Demo {demoDay}
+        <div style={{ padding: '12px 16px' }}>
+          <Text type="secondary">Demo {demoDay}</Text>
         </div>
       </Sider>
 
@@ -182,8 +325,10 @@ export default function DeskPage() {
           {invoices ? (
             <>
               <div className="desk-title-row">
-                <h1>{nav === 'guide' ? 'Guide' : nav === 'queue' ? 'Queue' : 'Desk'}</h1>
-                <Text type="secondary">{morningCapacity} Follow-up slots</Text>
+                <Title level={2} style={{ margin: 0 }}>{pageTitle}</Title>
+                <Text type="secondary">
+                  Follow-ups {totalFollowUps(filtered)} · {morningCapacity} slots · Due window vs {demoDay}
+                </Text>
               </div>
 
               {nav === 'guide' ? (
@@ -195,74 +340,92 @@ export default function DeskPage() {
                 />
               ) : (
                 <>
+                  <div className="filter-row">
+                    <Segmented
+                      value={dateFilter}
+                      onChange={value => setDateFilter(value as DateFilterPreset)}
+                      options={[
+                        { label: dateFilterLabels['last-day'], value: 'last-day' },
+                        { label: dateFilterLabels['last-7-days'], value: 'last-7-days' },
+                        { label: dateFilterLabels['this-month'], value: 'this-month' },
+                        { label: dateFilterLabels['this-year'], value: 'this-year' },
+                        { label: dateFilterLabels['all-time'], value: 'all-time' },
+                      ]}
+                    />
+                  </div>
                   <div className="kpi-row">
                     <div className="kpi-card">
-                      <div className="label">Open Remaining</div>
+                      <Text type="secondary" className="kpi-label">Open remaining</Text>
                       <div className="value accent">{money(kpis.openRemaining)}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Next up</div>
-                      <div className="value">{kpis.todayCount}</div>
+                      <Text type="secondary" className="kpi-label">Paid total</Text>
+                      <div className="value">{money(kpis.paid)}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Broken promises</div>
+                      <Text type="secondary" className="kpi-label">Broken promises</Text>
                       <div className="value warn">{kpis.broken}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Disputed</div>
+                      <Text type="secondary" className="kpi-label">Disputed</Text>
                       <div className="value danger">{kpis.disputed}</div>
                     </div>
                   </div>
 
-                  {nav === 'desk' ? (
-                    <section className="section-block" aria-labelledby="next-up">
-                      <h2 id="next-up">Next up</h2>
-                      {picks.length === 0 ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
-                      ) : (
-                        <div className="today-grid">
-                          {picks.map(invoice => {
-                            const { tier, reason } = explainPriority(invoice)
-                            const { Icon, tone } = pickIcon(invoice)
-                            return (
-                              <button
-                                key={invoice.id}
-                                type="button"
-                                className="today-card"
-                                aria-current={selectedId === invoice.id}
-                                onClick={() => setSelectedId(invoice.id)}
-                              >
-                                <span className={`today-icon${tone === 'default' ? '' : ` ${tone}`}`}>
-                                  <Icon />
-                                </span>
-                                <span style={{ minWidth: 0 }}>
-                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                    <span className="code">{invoice.code}</span>
-                                    <PriorityTag tier={tier} />
-                                  </div>
-                                  <div className="amt">{money(remaining(invoice))} Remaining</div>
-                                  <div className="why">{reason}</div>
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </section>
-                  ) : null}
+                  <section className="section-block" aria-labelledby="next-up">
+                    <Title level={4} id="next-up" style={{ marginTop: 0 }}>
+                      <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />
+                      Next up
+                    </Title>
+                    {picks.length === 0 ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
+                    ) : (
+                      <div className="today-grid">
+                        {picks.map(invoice => {
+                          const { tier, reason } = explainPriority(invoice)
+                          return (
+                            <button
+                              key={invoice.id}
+                              type="button"
+                              className="today-card"
+                              onClick={() => setDrawerId(invoice.id)}
+                            >
+                              <span style={{ minWidth: 0, width: '100%' }}>
+                                <Space size={8} wrap>
+                                  <Text strong className="invoice-code">{invoice.code}</Text>
+                                  <Text type="secondary">{glancePriority(tier)}</Text>
+                                </Space>
+                                <div className="invoice-customer" style={{ marginTop: 2 }}>
+                                  {invoice.customer}
+                                </div>
+                                <div>
+                                  <Text>{money(remaining(invoice))} remaining</Text>
+                                </div>
+                                <Text type="secondary">{reason}</Text>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
 
                   <section className="queue-panel" aria-labelledby="queue-heading">
-                    <div className="head" id="queue-heading">
-                      {nav === 'queue' ? 'All invoices' : 'Queue'}
+                    <div className="head">
+                      <Title level={4} id="queue-heading" style={{ margin: 0 }}>
+                        Queue
+                      </Title>
                     </div>
                     <Table
                       rowKey="id"
-                      size="middle"
+                      size="small"
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
+                      scroll={{ x: 1000 }}
+                      rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
-                        onClick: () => setSelectedId(record.id),
+                        onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },
                       })}
                       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Queue empty" /> }}
@@ -276,50 +439,35 @@ export default function DeskPage() {
       </Layout>
 
       <Drawer
-        title={selected ? selected.code : 'Invoice'}
-        open={Boolean(selected)}
-        onClose={() => setSelectedId(null)}
-        width={420}
+        title={drawerInvoice ? drawerInvoice.code : 'Invoice'}
+        open={Boolean(drawerInvoice)}
+        onClose={() => setDrawerId(null)}
+        width={440}
         destroyOnClose
       >
-        {selected ? (
+        {drawerInvoice ? (
           <>
-            <div style={{ marginBottom: 12 }}>
-              <Text type="secondary">{selected.customer}</Text>
-            </div>
-            <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <PriorityTag tier={priorityTier(selected)} />
-              <StatusTag label={invoiceStatusLabel(selected)} />
-            </div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-              {explainPriority(selected).reason}
-            </Text>
-            <Descriptions
-              size="small"
-              column={1}
-              bordered
-              items={[
-                {
-                  key: 'remaining',
-                  label: 'Remaining',
-                  children: `${money(remaining(selected))} / ${money(selected.amount)}`,
-                },
-                { key: 'promise', label: 'PromiseStatus', children: promiseStatus(selected) },
-                { key: 'dispute', label: 'DisputeStatus', children: disputeStatus(selected) },
-                { key: 'accuracy', label: 'InvoiceAccuracy', children: selected.invoiceAccuracy },
-                { key: 'owner', label: 'OwnerRole', children: selected.ownerRole },
-                { key: 'am', label: 'Account manager', children: selected.accountManager },
-                { key: 'overdue', label: 'Overdue', children: `${overdueDays(selected)} days` },
-                {
-                  key: 'followups',
-                  label: 'Follow-ups',
-                  children: selected.followUps.length === 0 ? 'None' : String(selected.followUps.length),
-                },
-              ]}
+            <Text type="secondary">{drawerInvoice.customer}</Text>
+            <InvoiceDetailPanel
+              invoice={drawerInvoice}
+              onAction={kind => openAction(drawerInvoice.id, kind)}
             />
           </>
         ) : null}
       </Drawer>
+
+      {actionInvoice && actionTarget ? (
+        <ActionModal
+          invoice={actionInvoice}
+          kind={actionTarget.kind}
+          open
+          onClose={() => setActionTarget(null)}
+          onSaved={items => {
+            applyDeskUpdate(items)
+            message.success('Saved')
+          }}
+        />
+      ) : null}
     </Layout>
   )
 }

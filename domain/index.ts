@@ -1,3 +1,7 @@
 export * from './model.ts'
 export * from './rules.ts'
 export { seed, seedInvoiceIds } from './seed.ts'
+export { applyChange } from './apply-change.ts'
+export * from './lifecycle.ts'
+export * from './activity.ts'
+export * from './date-filter.ts'
