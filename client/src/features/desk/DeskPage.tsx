@@ -3,7 +3,6 @@ import {
   Alert,
   App,
   Button,
-  Descriptions,
   Drawer,
   Empty,
   Layout,
@@ -20,7 +19,11 @@ import type { ColumnsType } from 'antd/es/table'
 import {
   BookOutlined,
   DashboardOutlined,
+  DollarOutlined,
+  FileTextOutlined,
   FlagOutlined,
+  UnorderedListOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import {
   activityTimeline,
@@ -34,8 +37,6 @@ import {
   emptyQueueFilters,
   explainPriority,
   filterByDueWindow,
-  formatDueDate,
-  morningCapacity,
   openRemainingTotal,
   overdueDays,
   paidTotal,
@@ -47,9 +48,9 @@ import {
   queueStatusFacetLabels,
   remaining,
   todaysThree,
-  totalFollowUps,
   type DateFilterPreset,
   type Invoice,
+  type PriorityTier,
   type QueueFilters,
   type QueuePriorityFacet,
   type QueuePromiseFacet,
@@ -67,16 +68,22 @@ import {
 } from './labels.ts'
 import {
   glanceDetails,
+  glanceDetailsTone,
   glanceDispute,
+  glanceDisputeTone,
   glancePriority,
   glancePromise,
+  glancePromiseTone,
   glanceStatus,
+  glanceStatusTone,
   priorityRowClass,
+  priorityToneClass,
+  type GlanceTone,
 } from './tableGlance.ts'
 import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
-const { Title, Text } = Typography
+const { Text } = Typography
 
 const tierOrder = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
 
@@ -95,17 +102,40 @@ function paidAmount(invoice: Invoice) {
 function InvoiceIdentity({ code, customer }: { code: string; customer: string }) {
   return (
     <div className="invoice-identity">
-      <span className="invoice-code">{code}</span>
-      <span className="invoice-customer">{customer}</span>
+      <span className="invoice-customer-name">{customer}</span>
+      <span className="invoice-code-muted">{code}</span>
     </div>
   )
+}
+
+function GlancePill({ label, tone }: { label: string; tone: GlanceTone }) {
+  if (label === '—') return <span className="cell-dash">—</span>
+  return <span className={`pill tone-${tone}`}>{label}</span>
+}
+
+function PriorityPill({ tier }: { tier: PriorityTier }) {
+  return <span className={`pill ${priorityToneClass(tier)}`}>{glancePriority(tier)}</span>
+}
+
+function DueCell({ invoice }: { invoice: Invoice }) {
+  const days = overdueDays(invoice)
+  return (
+    <div className="due-cell">
+      <span className="due-date">{invoice.dueDate}</span>
+      {days > 0 ? <span className="due-age">({days}d overdue)</span> : null}
+    </div>
+  )
+}
+
+function StateChip({ label, value, tone }: { label: string; value: string; tone: GlanceTone }) {
+  return <span className={`pill tone-${tone}`}>{label}: {value}</span>
 }
 
 function ActivitySection({ invoice }: { invoice: Invoice }) {
   const items = activityTimeline(invoice)
   return (
-    <div style={{ marginTop: 16 }}>
-      <Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>Activity</Title>
+    <div className="activity-block">
+      <h3 className="drawer-section">Activity</h3>
       {items.length === 0 ? (
         <Text type="secondary">No recorded actions yet.</Text>
       ) : (
@@ -136,50 +166,132 @@ function InvoiceDetailPanel({
   onAction: (kind: ActionKind) => void
 }) {
   const followUpCount = invoice.followUps.length
+  const days = overdueDays(invoice)
   return (
     <div className="drawer-detail">
-      <Text className="drawer-status-line">{primaryStatusLine(invoice)}</Text>
+      <p className="drawer-customer">{invoice.customer}</p>
+      <p className="drawer-status-line">{primaryStatusLine(invoice)}</p>
 
-      <div className="drawer-amount-block">
-        <Text type="secondary" className="drawer-field-label">Paid</Text>
-        <div className="drawer-paid-amount">
-          {money(paidAmount(invoice))} of {money(invoice.amount)}
+      <div className="drawer-figures">
+        <div>
+          <div className="drawer-kicker">Paid</div>
+          <div className="drawer-paid">
+            <span className="drawer-paid-main">{money(paidAmount(invoice))}</span>
+            <span className="drawer-paid-of">of {money(invoice.amount)}</span>
+          </div>
+        </div>
+        <div>
+          <div className="drawer-kicker">Due</div>
+          <div className="drawer-due-date">{invoice.dueDate}</div>
+          {days > 0 ? <div className="drawer-due-age">({days}d overdue)</div> : null}
         </div>
       </div>
 
-      <div className="drawer-due-block">
-        <Text type="secondary" className="drawer-field-label">Due</Text>
-        <div>{formatDueDate(invoice)}</div>
+      <div className="drawer-kicker">State</div>
+      <div className="state-chips">
+        <StateChip label="Promise" value={promiseStateValue(invoice)} tone={glancePromiseTone(invoice)} />
+        <StateChip label="Dispute" value={disputeStateValue(invoice)} tone={glanceDisputeTone(invoice)} />
+        <StateChip label="Details" value={detailsStateValue(invoice)} tone={glanceDetailsTone(invoice)} />
       </div>
 
-      <div className="drawer-state-block">
-        <Text type="secondary" className="drawer-field-label">State</Text>
-        <Descriptions
-          size="small"
-          column={1}
-          className="drawer-state-desc"
-          items={[
-            { key: 'promise', label: 'Promise', children: promiseStateValue(invoice) },
-            { key: 'dispute', label: 'Dispute', children: disputeStateValue(invoice) },
-            { key: 'details', label: 'Details', children: detailsStateValue(invoice) },
-          ]}
-        />
-      </div>
-
-      <Text type="secondary" className="drawer-meta">
+      <p className="drawer-meta">
         {ownerLabel(invoice.ownerRole)}
-        {' · '}
+        {': '}
         {invoice.accountManager}
         {' · '}
         {followUpCount === 0
           ? 'No follow-ups'
           : `${followUpCount} follow-up${followUpCount === 1 ? '' : 's'}`}
-      </Text>
+      </p>
 
-      <Title level={5} style={{ marginTop: 20, marginBottom: 8 }}>Actions</Title>
+      <h3 className="drawer-section">Actions</h3>
       <InvoiceActionButtons invoice={invoice} onAction={onAction} />
       <ActivitySection invoice={invoice} />
     </div>
+  )
+}
+
+function GuidePage() {
+  return (
+    <article className="guide-page">
+      <section>
+        <h2>Next up</h2>
+        <p>
+          The three cards are this morning’s follow-ups. Open one to see the invoice.
+          The line under the amount says why it is here.
+        </p>
+        <p>
+          Recording a payment, or resolving without payment, does not use up a slot.
+          When a High invoice leaves the queue, the next one moves into the three.
+          A promise that is still in the future stays off this list while High work remains.
+        </p>
+      </section>
+
+      <section>
+        <h2>Priority colors</h2>
+        <p>
+          The row wash is the priority. The tag is the same fact, easier to read in a column.
+          These are tiers, not a score and not a prediction of who will pay.
+        </p>
+        <ul className="guide-swatches">
+          <li><span className="pill prio-p0">High</span> Soft red row. Broken promise, never contacted, or details not checked.</li>
+          <li><span className="pill prio-p1">Med</span> Soft amber row. Open dispute, or follow-ups nobody answered.</li>
+          <li><span className="pill prio-p2">Low</span> Soft blue row. Promise on file, not due yet. Wait.</li>
+          <li><span className="pill prio-p3">Clear</span> Soft green row. Nothing left to chase.</li>
+        </ul>
+        <p>
+          Other tags: <span className="pill tone-attention">Broken</span> and needs-check are orange.
+          <span className="pill tone-caution">Disputed</span> is red.
+          <span className="pill tone-wait">Open</span> and verified are blue.
+          A dash means nothing is recorded there.
+        </p>
+      </section>
+
+      <section>
+        <h2>Actions</h2>
+        <p>
+          The drawer lists every action in the same order. The blue button is the one that fits this invoice.
+          The others stay visible. The line under a gray button says why it is off.
+        </p>
+        <ul>
+          <li><strong>Record follow-up</strong> is a contact note. It is not payment, and it does not verify the invoice.</li>
+          <li><strong>Record payment</strong> is the only action that counts cash. Part of the balance is allowed.</li>
+          <li><strong>Record promise</strong> saves a date. A future date waits. A past unpaid date is broken.</li>
+          <li><strong>Resolve without payment</strong> leaves the queue and does not count as cash.</li>
+          <li><strong>Route to AM</strong> is a labeled simulation. It does not message a real account manager.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Filters and sort</h2>
+        <p>
+          Due window, above the totals, limits Next up, the totals, and the queue together.
+          Status, Promise, and Priority narrow only the table. Click a column title to sort.
+          If the table is empty, it says whether the window matched nothing or the queue is cleared, and offers a way back.
+        </p>
+      </section>
+
+      <section>
+        <h2>Refresh</h2>
+        <p>
+          This browser keeps the desk. Refresh and the same notes, promises, and payments are still there.
+          Another browser starts from the six sample invoices. If the server file is wiped, this browser starts over too.
+        </p>
+      </section>
+
+      <section>
+        <h2>The six invoices</h2>
+        <p>Dates are relative to the demo day on the sidebar, 2026-11-26. The customers are fictional.</p>
+        <ul>
+          <li><strong>Dune</strong> promised to pay and the date passed. Follow up.</li>
+          <li><strong>Brook</strong> has never been contacted. Make the first call.</li>
+          <li><strong>Grove</strong> says the invoice details are wrong. Check them before chasing.</li>
+          <li><strong>Crest</strong> promised a date that has not arrived. Wait.</li>
+          <li><strong>Aster</strong> disputes the quantity. Do not treat it as a cold chase.</li>
+          <li><strong>East</strong> did not answer two follow-ups. It stays Med until no High work is left. Routing to the account manager is for an open dispute, which is Aster, not East.</li>
+        </ul>
+      </section>
+    </article>
   )
 }
 
@@ -263,7 +375,7 @@ export default function DeskPage() {
 
   const columns: ColumnsType<Invoice> = [
     {
-      title: 'Invoice',
+      title: 'Customer / Invoice',
       key: 'invoice',
       sorter: (a, b) => compareQueueColumn(a, b, 'invoice'),
       render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
@@ -272,51 +384,51 @@ export default function DeskPage() {
       title: 'Remaining',
       key: 'remaining',
       align: 'right',
-      width: 100,
+      width: 110,
       sorter: (a, b) => compareQueueColumn(a, b, 'remaining'),
-      render: (_value, row) => <Text>{money(remaining(row))}</Text>,
+      render: (_value, row) => <span className="cell-money">{money(remaining(row))}</span>,
     },
     {
       title: 'Due',
       key: 'due',
-      width: 150,
+      width: 148,
       sorter: (a, b) => compareQueueColumn(a, b, 'due'),
-      render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
+      render: (_value, row) => <DueCell invoice={row} />,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 80,
+      width: 96,
       sorter: (a, b) => compareQueueColumn(a, b, 'priority'),
-      render: (_value, row) => <Text>{glancePriority(priorityTier(row))}</Text>,
+      render: (_value, row) => <PriorityPill tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
-      width: 100,
+      width: 110,
       sorter: (a, b) => compareQueueColumn(a, b, 'status'),
-      render: (_value, row) => <Text>{glanceStatus(row)}</Text>,
+      render: (_value, row) => <GlancePill label={glanceStatus(row)} tone={glanceStatusTone(row)} />,
     },
     {
       title: 'Promise',
       key: 'promise',
-      width: 88,
+      width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'promise'),
-      render: (_value, row) => <Text>{glancePromise(row)}</Text>,
+      render: (_value, row) => <GlancePill label={glancePromise(row)} tone={glancePromiseTone(row)} />,
     },
     {
       title: 'Dispute',
       key: 'dispute',
-      width: 88,
+      width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'dispute'),
-      render: (_value, row) => <Text>{glanceDispute(row)}</Text>,
+      render: (_value, row) => <GlancePill label={glanceDispute(row)} tone={glanceDisputeTone(row)} />,
     },
     {
       title: 'Details',
       key: 'details',
-      width: 100,
+      width: 120,
       sorter: (a, b) => compareQueueColumn(a, b, 'details'),
-      render: (_value, row) => <Text>{glanceDetails(row)}</Text>,
+      render: (_value, row) => <GlancePill label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
     },
     {
       title: '',
@@ -332,7 +444,7 @@ export default function DeskPage() {
     },
   ]
 
-  const pageTitle = nav === 'guide' ? 'Guide' : 'Desk'
+  const onGuide = nav === 'guide'
 
   return (
     <Layout style={{ minHeight: '100%' }}>
@@ -351,9 +463,7 @@ export default function DeskPage() {
             { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
           ]}
         />
-        <div style={{ padding: '12px 16px' }}>
-          <Text type="secondary">Demo {demoDay}</Text>
-        </div>
+        <div className="sider-foot">Demo {demoDay}</div>
       </Sider>
 
       <Layout>
@@ -367,20 +477,17 @@ export default function DeskPage() {
 
           {invoices ? (
             <>
-              <div className="desk-title-row">
-                <Title level={2} style={{ margin: 0 }}>{pageTitle}</Title>
-                <Text type="secondary">
-                  Follow-ups {totalFollowUps(filtered)} · {morningCapacity} slots · Due window vs {demoDay}
-                </Text>
-              </div>
+              <header className="desk-title-block">
+                <h1 className="page-title">{onGuide ? 'Guide' : 'Desk'}</h1>
+                <p className="page-subtitle">
+                  {onGuide
+                    ? 'How to use the desk.'
+                    : 'Collections operations desk for invoice follow-ups.'}
+                </p>
+              </header>
 
-              {nav === 'guide' ? (
-                <Alert
-                  type="info"
-                  showIcon
-                  message="Guide placeholder"
-                  description="Reviewer walkthrough lands in a later ticket."
-                />
+              {onGuide ? (
+                <GuidePage />
               ) : (
                 <>
                   <div className="filter-row">
@@ -403,28 +510,40 @@ export default function DeskPage() {
                   </div>
                   <div className="kpi-row">
                     <div className="kpi-card">
-                      <Text type="secondary" className="kpi-label">Open remaining</Text>
+                      <div className="kpi-label">
+                        <DollarOutlined className="kpi-icon accent" aria-hidden />
+                        Open remaining
+                      </div>
                       <div className="value accent">{money(kpis.openRemaining)}</div>
                     </div>
                     <div className="kpi-card">
-                      <Text type="secondary" className="kpi-label">Paid total</Text>
+                      <div className="kpi-label">
+                        <FileTextOutlined className="kpi-icon muted" aria-hidden />
+                        Paid total
+                      </div>
                       <div className="value">{money(kpis.paid)}</div>
                     </div>
                     <div className="kpi-card">
-                      <Text type="secondary" className="kpi-label">Broken promises</Text>
+                      <div className="kpi-label">
+                        <WarningOutlined className="kpi-icon warn" aria-hidden />
+                        Broken promises
+                      </div>
                       <div className="value warn">{kpis.broken}</div>
                     </div>
                     <div className="kpi-card">
-                      <Text type="secondary" className="kpi-label">Disputed</Text>
+                      <div className="kpi-label">
+                        <FlagOutlined className="kpi-icon danger" aria-hidden />
+                        Disputed
+                      </div>
                       <div className="value danger">{kpis.disputed}</div>
                     </div>
                   </div>
 
                   <section className="section-block" aria-labelledby="next-up">
-                    <Title level={4} id="next-up" style={{ marginTop: 0 }}>
-                      <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} aria-hidden />
+                    <h2 className="section-label" id="next-up">
+                      <FlagOutlined className="section-icon accent" aria-hidden />
                       Next up
-                    </Title>
+                    </h2>
                     {picks.length === 0 ? (
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -444,22 +563,18 @@ export default function DeskPage() {
                             <button
                               key={invoice.id}
                               type="button"
-                              className="today-card"
+                              className={drawerId === invoice.id ? 'today-card is-open' : 'today-card'}
+                              aria-current={drawerId === invoice.id ? 'true' : undefined}
                               aria-label={`Open ${invoice.code}, ${invoice.customer}`}
                               onClick={() => setDrawerId(invoice.id)}
                             >
-                              <span style={{ minWidth: 0, width: '100%' }}>
-                                <Space size={8} wrap>
-                                  <Text strong className="invoice-code">{invoice.code}</Text>
-                                  <Text type="secondary">{glancePriority(tier)}</Text>
-                                </Space>
-                                <div className="invoice-customer" style={{ marginTop: 2 }}>
-                                  {invoice.customer}
-                                </div>
-                                <div>
-                                  <Text>{money(remaining(invoice))} remaining</Text>
-                                </div>
-                                <Text type="secondary">{reason}</Text>
+                              <span className="today-card-body">
+                                <span className="today-card-top">
+                                  <span className="today-company">{invoice.customer}</span>
+                                  <PriorityPill tier={tier} />
+                                </span>
+                                <span className="today-amount">{money(remaining(invoice))} remaining</span>
+                                <span className="today-reason">{reason}</span>
                               </span>
                             </button>
                           )
@@ -470,9 +585,10 @@ export default function DeskPage() {
 
                   <section className="queue-panel" aria-labelledby="queue-heading">
                     <div className="head">
-                      <Title level={4} id="queue-heading" style={{ margin: 0 }}>
+                      <h2 className="section-label" id="queue-heading">
+                        <UnorderedListOutlined className="section-icon" aria-hidden />
                         Queue
-                      </Title>
+                      </h2>
                     </div>
                     <div className="queue-filter-bar" role="group" aria-label="Queue filters">
                       <label className="filter-label" htmlFor="queue-filter-status">Status</label>
@@ -593,17 +709,15 @@ export default function DeskPage() {
         title={drawerInvoice ? drawerInvoice.code : 'Invoice'}
         open={Boolean(drawerInvoice)}
         onClose={() => setDrawerId(null)}
-        width={440}
+        className="invoice-drawer"
+        width={420}
         destroyOnClose
       >
         {drawerInvoice ? (
-          <>
-            <Text type="secondary">{drawerInvoice.customer}</Text>
-            <InvoiceDetailPanel
-              invoice={drawerInvoice}
-              onAction={kind => openAction(drawerInvoice.id, kind)}
-            />
-          </>
+          <InvoiceDetailPanel
+            invoice={drawerInvoice}
+            onAction={kind => openAction(drawerInvoice.id, kind)}
+          />
         ) : null}
       </Drawer>
 
