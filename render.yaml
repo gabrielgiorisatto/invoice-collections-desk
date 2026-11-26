@@ -1,0 +1,23 @@
+# Render Blueprint for the collections desk.
+# Persistent disks are not available on the Free instance type.
+# This blueprint uses Starter so the SQLite file survives deploys and restarts.
+# On Free, delete the disk block and SQLITE_PATH. The cookie session still works
+# until the instance filesystem is replaced; the desk then reseeds.
+
+services:
+  - type: web
+    name: invoice-collections-desk
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SQLITE_PATH
+        value: /var/data/collections.sqlite
+    disk:
+      name: collections
+      mountPath: /var/data
+      sizeGB: 1
