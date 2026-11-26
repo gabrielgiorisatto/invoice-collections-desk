@@ -14,7 +14,7 @@ This repo is configured for Matt Pocock engineering skills (Cursor). Spec: [#1](
 | Ranking | Priority tiers P0–P3, not points ([ADR-0001](docs/adr/0001-priority-tiers-not-points.md)); East is **P1**, fills **Today’s 3** only when no P0 left |
 | Morning slots | **MorningCapacity** = 3; payments and **Resolve** do **not** consume slots |
 | Metric | `sum(payments)` vs `count(follow-ups)` ([ADR-0003](docs/adr/0003-proposed-recovery-metric.md)) |
-| UI | Professional finance-ops desk; **Today’s 3** first; usable core over branding |
+| UI | **Ant Design** invoice-SaaS layout (sidebar, KPI cards, table, drawer); primary blue; glossary labels |
 | Delivery bar | See [`docs/agents/delivery-checklist.md`](docs/agents/delivery-checklist.md) |
 
 ## Agent skills

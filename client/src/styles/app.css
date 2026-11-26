@@ -1,0 +1,178 @@
+html, body, #root { height: 100%; }
+body { margin: 0; background: #F9FAFB; color: #111827; }
+
+.desk-sider {
+  border-right: 1px solid #E5E7EB !important;
+  background: #FFFFFF !important;
+}
+.desk-sider .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+.desk-sider .brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #2563EB;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.desk-sider .brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: #111827;
+}
+.desk-sider .ant-menu-item-selected {
+  position: relative;
+}
+.desk-sider .ant-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: #2563EB;
+}
+
+.desk-main { padding: 24px 28px 40px; }
+.desk-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.desk-title-row h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.kpi-card .label {
+  font-size: 12px;
+  color: #6B7280;
+  margin-bottom: 8px;
+}
+.kpi-card .value {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+}
+.kpi-card .value.accent { color: #2563EB; }
+.kpi-card .value.warn { color: #D97706; }
+.kpi-card .value.danger { color: #DC2626; }
+
+.section-block { margin-bottom: 20px; }
+.section-block h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.today-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+.today-card:hover { border-color: #BFDBFE; background: #F8FBFF; }
+.today-card[aria-current="true"] {
+  border-color: #2563EB;
+  background: #EFF6FF;
+}
+.today-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #EFF6FF;
+  color: #2563EB;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.today-icon.warn { background: #FFFBEB; color: #D97706; }
+.today-icon.danger { background: #FEF2F2; color: #DC2626; }
+.today-card .code { font-weight: 700; color: #111827; }
+.today-card .amt { margin-top: 2px; font-size: 13px; color: #374151; font-weight: 600; }
+.today-card .why { margin-top: 6px; font-size: 12px; color: #6B7280; line-height: 1.35; }
+
+.queue-panel {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.queue-panel .head {
+  padding: 14px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .today-grid { grid-template-columns: 1fr; }
+}
+
+body {
+  font-family: "Inter", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.solid-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+}
+.solid-tag.p0 { background: #E11D48; color: #FFFFFF; }
+.solid-tag.p1 { background: #F59E0B; color: #111827; }
+.solid-tag.p2 { background: #64748B; color: #FFFFFF; }
+.solid-tag.p3 { background: #16A34A; color: #FFFFFF; }
+.solid-tag.status-open { background: #E5E7EB; color: #111827; }
+.solid-tag.status-promised { background: #2563EB; color: #FFFFFF; }
+.solid-tag.status-broken { background: #E11D48; color: #FFFFFF; }
+.solid-tag.status-disputed { background: #7C2D12; color: #FFFFFF; }
+.solid-tag.status-unverified { background: #D97706; color: #111827; }
+.solid-tag.status-partial { background: #0F766E; color: #FFFFFF; }
+.solid-tag.status-paid { background: #16A34A; color: #FFFFFF; }
+.solid-tag.status-resolved { background: #6B7280; color: #FFFFFF; }

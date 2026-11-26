@@ -1,0 +1,37 @@
+{
+  "name": "invoice-collections-desk",
+  "version": "1.0.0",
+  "description": "Morning collections desk for a finance operator",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "tsx server/src/index.ts",
+    "build": "tsc --noEmit && vite build --config client/vite.config.ts",
+    "start": "NODE_ENV=production tsx server/src/index.ts"
+  },
+  "author": "Gabriel Giorisatto",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "antd": "^6.7.2",
+    "express": "^5.1.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tsx": "^4.19.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@types/supertest": "^6.0.3",
+    "@vitejs/plugin-react": "^4.5.0",
+    "supertest": "^7.1.1",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
