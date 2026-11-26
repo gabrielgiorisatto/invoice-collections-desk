@@ -7,13 +7,22 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.desk-shell { min-width: 0; }
+.desk-shell {
+  min-width: 0;
+  min-height: 100vh;
+}
 .desk-body { min-width: 0; background: #F9FAFB; }
-.desk-sider {
+.desk-shell > .desk-sider.ant-layout-sider {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: auto;
   border-right: 1px solid #E5E7EB !important;
   background: #FFFFFF !important;
 }
-.desk-sider .ant-layout-sider-children {
+.desk-shell > .desk-sider.ant-layout-sider .ant-layout-sider-children {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -160,14 +169,25 @@ body {
   outline: 2px solid #2563EB;
   outline-offset: 2px;
 }
+.ant-drawer-content-wrapper:has(.nav-drawer) {
+  height: 100vh;
+}
+.nav-drawer.ant-drawer-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 .nav-drawer .ant-drawer-body {
+  flex: 1;
+  min-height: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
 }
 .nav-drawer .side-nav {
   flex: 1;
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
 }
 .nav-drawer .ant-drawer-header { border-bottom: 1px solid #E5E7EB; }
 .today-card:focus-visible,
@@ -539,67 +559,112 @@ body {
   border-radius: 8px;
   background: #F9FAFB;
 }
-.walkthrough {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.briefing {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-width: 440px;
+  gap: 22px;
+  max-width: 920px;
+  min-width: 0;
 }
-.walkthrough li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
-}
-.walk-index {
-  position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: #2563EB;
-  color: #FFFFFF;
-  display: grid;
-  place-items: center;
+.brief-section h2 {
+  margin: 0;
   font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6B7280;
 }
-.walkthrough li:not(:last-child) .walk-index::after {
-  content: "";
-  position: absolute;
-  top: 32px;
-  bottom: -16px;
-  left: 13px;
-  width: 2px;
-  background: #DBEAFE;
+.brief-lead {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #4B5563;
 }
-.walk-card {
-  margin: 0 0 16px;
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 0;
+}
+.brief-card {
+  min-width: 0;
+  margin: 0;
   padding: 12px 14px;
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
   border-radius: 10px;
-  min-width: 0;
 }
-.walk-label {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: #EFF6FF;
-  color: #1D4ED8;
-  font-size: 13px;
+.brief-card dt,
+.brief-group dt {
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: -0.01em;
-}
-.walk-card p {
-  margin: 8px 0 0;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
   color: #111827;
 }
+.brief-card dd,
+.brief-group dd {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #4B5563;
+}
+.brief-points {
+  margin: 10px 0 0;
+  padding: 12px 14px 12px 32px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+}
+.brief-points li {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #111827;
+}
+.brief-points li + li { margin-top: 6px; }
+.brief-legend {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+}
+.brief-legend li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #4B5563;
+}
+.brief-legend .pill { flex: none; }
+.brief-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+.brief-group {
+  min-width: 0;
+  padding: 12px 14px;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+}
+.brief-group h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6B7280;
+}
+.brief-group dl { margin: 0; }
+.brief-group dl div + div { margin-top: 10px; }
 
 .gate-loading {
   min-height: 100%;
@@ -703,6 +768,9 @@ body {
     width: 100% !important;
   }
   .drawer-figures { grid-template-columns: 1fr; }
+  .brief-grid,
+  .brief-legend,
+  .brief-groups { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 420px) {

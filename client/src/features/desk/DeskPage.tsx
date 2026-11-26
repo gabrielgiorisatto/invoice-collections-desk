@@ -64,6 +64,7 @@ import { loadInvoices } from '../../api/invoices.ts'
 import { fetchSession, signOut } from '../../api/session.ts'
 import ActionModal from './ActionModal.tsx'
 import BrandMark from './BrandMark.tsx'
+import GuidePage from './GuidePage.tsx'
 import LoginScreen from './LoginScreen.tsx'
 import { InvoiceActionButtons } from './InvoiceActions.tsx'
 import {
@@ -215,29 +216,6 @@ function InvoiceDetailPanel({
       <InvoiceActionButtons invoice={invoice} onAction={onAction} />
       <ActivitySection invoice={invoice} />
     </div>
-  )
-}
-
-const walkthrough = [
-  { label: 'Next up', detail: 'Open a card.' },
-  { label: 'Invoice', detail: 'Read the status, Paid, and Due.' },
-  { label: 'Record follow-up', detail: 'Take the blue action.' },
-  { label: 'Queue', detail: 'Find that invoice in the table.' },
-] as const
-
-function GuidePage() {
-  return (
-    <ol className="walkthrough">
-      {walkthrough.map((step, index) => (
-        <li key={step.label}>
-          <span className="walk-index" aria-hidden="true">{index + 1}</span>
-          <div className="walk-card">
-            <span className="walk-label">{step.label}</span>
-            <p>{step.detail}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
   )
 }
 
@@ -456,7 +434,7 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
   const onGuide = nav === 'guide'
 
   return (
-    <Layout className="desk-shell" style={{ minHeight: '100%' }}>
+    <Layout className="desk-shell">
       {narrow ? (
         <Drawer
           placement="left"
@@ -518,7 +496,7 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                 <h1 className="page-title">{onGuide ? 'Guide' : 'Desk'}</h1>
                 <p className="page-subtitle">
                   {onGuide
-                    ? 'Next up, open the invoice, one action, then the queue.'
+                    ? 'What the desk is showing, and when each action is available.'
                     : 'Collections operations desk for invoice follow-ups.'}
                 </p>
               </header>

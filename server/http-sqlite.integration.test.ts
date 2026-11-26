@@ -76,6 +76,11 @@ describe('HTTP routes and SQLite session writes', () => {
       expect((await request(app).put('/api/login').send({})).status).toBe(404)
       expect((await request(app).get(`/api/invoices/${seedInvoiceIds.Brook}`)).status).toBe(404)
 
+      const logout = await request(app).post('/api/logout')
+      expect(logout.status).toBe(200)
+      expect(logout.body).toEqual({ ok: true })
+      expect(logout.headers['set-cookie']?.[0]).toMatch(/Max-Age=0/)
+
       expect(await sessionCount(db)).toBe(0)
     } finally {
       close()
