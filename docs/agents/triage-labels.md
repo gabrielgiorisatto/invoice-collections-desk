@@ -1,6 +1,8 @@
 # Triage Labels
 
-The skills speak in terms of five canonical triage roles. This file maps those roles to the actual label strings used in this repo's issue tracker.
+**This repo does not require triage labels.** Gabriel confirmed GitHub Issues as the tracker **without** mandating label create/maintenance for the take-home. Skills that mention triage roles may still refer to the canonical names below if labels exist; agents must **not** block on creating them (and must not fail setup if `gh label create` 403s).
+
+Optional mapping if labels are added later:
 
 | Label in mattpocock/skills | Label in our tracker | Meaning                                  |
 | -------------------------- | -------------------- | ---------------------------------------- |
@@ -8,8 +10,6 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 | `needs-info`               | `needs-info`         | Waiting on reporter for more information |
 | `ready-for-agent`          | `ready-for-agent`    | Fully specified, ready for an AFK agent  |
 | `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
-| `wontfix`                  | `wontfix`            | Will not be actioned                     |
+| `wontfix`                  | `wontfix`            | Will not be actioned (GitHub default may already exist) |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
-
-Edit the "Label in our tracker" column to match whatever vocabulary you actually use.
+For `/to-spec` and `/to-tickets` on this project: publish issues without depending on triage label workflow unless Gabriel opts in later.
