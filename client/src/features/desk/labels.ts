@@ -8,21 +8,7 @@ import {
   type PromiseStatus,
   type ResolutionReason,
 } from '@domain/index.ts'
-
-export function promiseLabel(status: PromiseStatus): string {
-  switch (status) {
-    case 'none':
-      return 'No promise'
-    case 'active':
-      return 'Active'
-    case 'broken':
-      return 'Broken'
-    default: {
-      const _exhaustive: never = status
-      return _exhaustive
-    }
-  }
-}
+import { invoiceStatus, type StatusKind } from './status.ts'
 
 export function disputeLabel(status: DisputeStatus): string {
   switch (status) {
@@ -34,19 +20,6 @@ export function disputeLabel(status: DisputeStatus): string {
       return 'Resolved'
     default: {
       const _exhaustive: never = status
-      return _exhaustive
-    }
-  }
-}
-
-export function accuracyLabel(value: InvoiceAccuracy): string {
-  switch (value) {
-    case 'ok':
-      return 'Verified'
-    case 'unverified_claim':
-      return 'Needs verification'
-    default: {
-      const _exhaustive: never = value
       return _exhaustive
     }
   }
@@ -80,19 +53,58 @@ export function resolutionReasonLabel(reason: ResolutionReason): string {
   }
 }
 
-/**
- * Drawer value text (label is separate). Full wording, no “Promise:” prefix.
- * Never bare Open / None / Verified alone.
- */
-export function promiseDetailValue(invoice: Invoice): string {
+export function promiseLabel(status: PromiseStatus): string {
+  switch (status) {
+    case 'none':
+      return 'No promise'
+    case 'active':
+      return 'Active'
+    case 'broken':
+      return 'Broken'
+    default: {
+      const _exhaustive: never = status
+      return _exhaustive
+    }
+  }
+}
+
+/** One primary status line for the drawer header — not repeated elsewhere. */
+export function primaryStatusLine(invoice: Invoice): string {
+  const { kind }: { kind: StatusKind } = invoiceStatus(invoice)
+  switch (kind) {
+    case 'open':
+      return 'Open balance — ready to chase.'
+    case 'promised':
+      return 'Active payment promise on file.'
+    case 'broken':
+      return 'Broken payment promise — still unpaid.'
+    case 'disputed':
+      return 'Open commercial dispute — chase paused.'
+    case 'unverified':
+      return 'Invoice details need verification before chase.'
+    case 'partial':
+      return 'Partially paid — remaining balance is open.'
+    case 'paid':
+      return 'Fully paid.'
+    case 'resolved':
+      return 'Resolved without full payment.'
+    default: {
+      const _exhaustive: never = kind
+      return _exhaustive
+    }
+  }
+}
+
+/** Drawer State block — short structured values, not table glance and not prose. */
+export function promiseStateValue(invoice: Invoice): string {
   const status = promiseStatus(invoice)
   switch (status) {
     case 'none':
-      return 'No promise on file'
+      return 'None'
     case 'active':
-      return `Active — due ${invoice.promise!.dueDate}`
+      return `Active due ${invoice.promise!.dueDate}`
     case 'broken':
-      return `Broken — due ${invoice.promise!.dueDate}`
+      return 'Broken'
     default: {
       const _exhaustive: never = status
       return _exhaustive
@@ -100,15 +112,15 @@ export function promiseDetailValue(invoice: Invoice): string {
   }
 }
 
-export function disputeDetailValue(invoice: Invoice): string {
+export function disputeStateValue(invoice: Invoice): string {
   const status = disputeStatus(invoice)
   switch (status) {
     case 'none':
-      return 'No dispute on file'
+      return 'None'
     case 'open':
-      return `Open — ${invoice.dispute!.reason}`
+      return 'Open'
     case 'resolved':
-      return `Resolved — ${invoice.dispute!.reason}`
+      return 'Resolved'
     default: {
       const _exhaustive: never = status
       return _exhaustive
@@ -116,18 +128,16 @@ export function disputeDetailValue(invoice: Invoice): string {
   }
 }
 
-export function accuracyDetailValue(invoice: Invoice): string {
-  return accuracyLabel(invoice.invoiceAccuracy)
-}
-
-export function invoicePromiseLabel(invoice: Invoice): string {
-  return promiseLabel(promiseStatus(invoice))
-}
-
-export function invoiceDisputeLabel(invoice: Invoice): string {
-  return disputeLabel(disputeStatus(invoice))
-}
-
-export function invoiceAccuracyLabel(invoice: Invoice): string {
-  return accuracyLabel(invoice.invoiceAccuracy)
+export function detailsStateValue(invoice: Invoice): string {
+  const value: InvoiceAccuracy = invoice.invoiceAccuracy
+  switch (value) {
+    case 'ok':
+      return 'Verified'
+    case 'unverified_claim':
+      return 'Needs verification'
+    default: {
+      const _exhaustive: never = value
+      return _exhaustive
+    }
+  }
 }

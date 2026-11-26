@@ -18,11 +18,9 @@ import type { ColumnsType } from 'antd/es/table'
 import {
   BookOutlined,
   DashboardOutlined,
-  ExclamationCircleOutlined,
   FileTextOutlined,
   FlagOutlined,
   UnorderedListOutlined,
-  WarningOutlined,
 } from '@ant-design/icons'
 import {
   activityTimeline,
@@ -45,16 +43,23 @@ import {
   type Invoice,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
-import { invoiceStatus } from './status.ts'
-import { PriorityTag, StatusTag } from './tags.tsx'
 import ActionModal from './ActionModal.tsx'
 import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
 import {
-  accuracyDetailValue,
-  disputeDetailValue,
+  detailsStateValue,
+  disputeStateValue,
   ownerLabel,
-  promiseDetailValue,
+  primaryStatusLine,
+  promiseStateValue,
 } from './labels.ts'
+import {
+  glanceDetails,
+  glanceDispute,
+  glancePriority,
+  glancePromise,
+  glanceStatus,
+  isP0Row,
+} from './tableGlance.ts'
 import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
@@ -70,23 +75,8 @@ function money(amount: number) {
   }).format(amount)
 }
 
-function DetailValue({
-  text,
-  bad,
-}: {
-  text: string
-  bad?: 'error' | 'warning'
-}) {
-  const icon =
-    bad === 'error' ? <ExclamationCircleOutlined style={{ color: '#cf1322', marginRight: 6 }} />
-      : bad === 'warning' ? <WarningOutlined style={{ color: '#d48806', marginRight: 6 }} />
-        : null
-  return (
-    <span>
-      {icon}
-      <Text>{text}</Text>
-    </span>
-  )
+function paidAmount(invoice: Invoice) {
+  return invoice.amount - remaining(invoice)
 }
 
 function ActivitySection({ invoice }: { invoice: Invoice }) {
@@ -123,74 +113,48 @@ function InvoiceDetailPanel({
   invoice: Invoice
   onAction: (kind: ActionKind) => void
 }) {
-  const promise = promiseStatus(invoice)
-  const dispute = disputeStatus(invoice)
+  const followUpCount = invoice.followUps.length
   return (
-    <div className="row-expand">
-      <Text type="secondary">{explainPriority(invoice).reason}</Text>
-      <Descriptions
-        size="small"
-        column={1}
-        style={{ marginTop: 12, marginBottom: 16 }}
-        items={[
-          {
-            key: 'remaining',
-            label: 'Remaining',
-            children: `${money(remaining(invoice))} of ${money(invoice.amount)}`,
-          },
-          {
-            key: 'due',
-            label: 'Due',
-            children: formatDueDate(invoice),
-          },
-          {
-            key: 'promise',
-            label: 'Promise',
-            children: (
-              <DetailValue
-                text={promiseDetailValue(invoice)}
-                bad={promise === 'broken' ? 'error' : undefined}
-              />
-            ),
-          },
-          {
-            key: 'dispute',
-            label: 'Dispute',
-            children: (
-              <DetailValue
-                text={disputeDetailValue(invoice)}
-                bad={dispute === 'open' ? 'error' : undefined}
-              />
-            ),
-          },
-          {
-            key: 'accuracy',
-            label: 'Invoice details',
-            children: (
-              <DetailValue
-                text={accuracyDetailValue(invoice)}
-                bad={invoice.invoiceAccuracy === 'unverified_claim' ? 'warning' : undefined}
-              />
-            ),
-          },
-          {
-            key: 'owner',
-            label: 'Owner',
-            children: ownerLabel(invoice.ownerRole),
-          },
-          {
-            key: 'am',
-            label: 'Account manager',
-            children: invoice.accountManager,
-          },
-          {
-            key: 'followups',
-            label: 'Follow-ups',
-            children: invoice.followUps.length === 0 ? 'None' : String(invoice.followUps.length),
-          },
-        ]}
-      />
-      <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>Actions</Title>
+    <div className="drawer-detail">
+      <Text className="drawer-status-line">{primaryStatusLine(invoice)}</Text>
+
+      <div className="drawer-amount-block">
+        <Text type="secondary" className="drawer-field-label">Paid</Text>
+        <div className="drawer-paid-amount">
+          {money(paidAmount(invoice))} of {money(invoice.amount)}
+        </div>
+      </div>
+
+      <div className="drawer-due-block">
+        <Text type="secondary" className="drawer-field-label">Due</Text>
+        <div>{formatDueDate(invoice)}</div>
+      </div>
+
+      <div className="drawer-state-block">
+        <Text type="secondary" className="drawer-field-label">State</Text>
+        <Descriptions
+          size="small"
+          column={1}
+          className="drawer-state-desc"
+          items={[
+            { key: 'promise', label: 'Promise', children: promiseStateValue(invoice) },
+            { key: 'dispute', label: 'Dispute', children: disputeStateValue(invoice) },
+            { key: 'details', label: 'Details', children: detailsStateValue(invoice) },
+          ]}
+        />
+      </div>
+
+      <Text type="secondary" className="drawer-meta">
+        {ownerLabel(invoice.ownerRole)}
+        {' · '}
+        {invoice.accountManager}
+        {' · '}
+        {followUpCount === 0
+          ? 'No follow-ups'
+          : `${followUpCount} follow-up${followUpCount === 1 ? '' : 's'}`}
+      </Text>
+
+      <Title level={5} style={{ marginTop: 20, marginBottom: 8 }}>Actions</Title>
       <InvoiceActionButtons invoice={invoice} onAction={onAction} />
       <ActivitySection invoice={invoice} />
     </div>
@@ -275,23 +239,38 @@ export default function DeskPage() {
     {
       title: 'Due',
       key: 'due',
-      width: 180,
+      width: 160,
       render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
       width: 72,
-      render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
+      render: (_value, row) => <Text>{glancePriority(priorityTier(row))}</Text>,
     },
     {
       title: 'Status',
       key: 'status',
-      width: 150,
-      render: (_value, row) => {
-        const status = invoiceStatus(row)
-        return <StatusTag kind={status.kind} label={status.label} />
-      },
+      width: 110,
+      render: (_value, row) => <Text>{glanceStatus(row)}</Text>,
+    },
+    {
+      title: 'Promise',
+      key: 'promise',
+      width: 80,
+      render: (_value, row) => <Text>{glancePromise(row)}</Text>,
+    },
+    {
+      title: 'Dispute',
+      key: 'dispute',
+      width: 80,
+      render: (_value, row) => <Text>{glanceDispute(row)}</Text>,
+    },
+    {
+      title: 'Details',
+      key: 'details',
+      width: 100,
+      render: (_value, row) => <Text>{glanceDetails(row)}</Text>,
     },
     {
       title: '',
@@ -414,7 +393,7 @@ export default function DeskPage() {
                                   <Space size={8} wrap>
                                     <FileTextOutlined style={{ color: 'rgba(0,0,0,0.45)' }} />
                                     <Text strong>{invoice.code}</Text>
-                                    <PriorityTag tier={tier} />
+                                    <Text type="secondary">{glancePriority(tier)}</Text>
                                   </Space>
                                   <div>
                                     <Text>{money(remaining(invoice))} remaining</Text>
@@ -441,7 +420,8 @@ export default function DeskPage() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 900 }}
+                      scroll={{ x: 1100 }}
+                      rowClassName={record => (isP0Row(record) ? 'row-p0' : '')}
                       onRow={record => ({
                         onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },
@@ -466,15 +446,6 @@ export default function DeskPage() {
         {drawerInvoice ? (
           <>
             <Text type="secondary">{drawerInvoice.customer}</Text>
-            <div style={{ marginTop: 12, marginBottom: 12 }}>
-              <Space wrap>
-                <PriorityTag tier={priorityTier(drawerInvoice)} />
-                {(() => {
-                  const status = invoiceStatus(drawerInvoice)
-                  return <StatusTag kind={status.kind} label={status.label} />
-                })()}
-              </Space>
-            </div>
             <InvoiceDetailPanel
               invoice={drawerInvoice}
               onAction={kind => openAction(drawerInvoice.id, kind)}
