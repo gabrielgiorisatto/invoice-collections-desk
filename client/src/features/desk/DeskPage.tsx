@@ -261,15 +261,17 @@ function SideNav({
       />
       <div className="sider-foot">
         <div className="sider-day">Demo {demoDay}</div>
-        <button
-          type="button"
-          className="sider-user"
-          disabled={signingOut}
-          aria-label={`Sign out ${demoAccount.name}, ${demoAccount.role}`}
-          onClick={onSignOut}
-        >
+        <div className="sider-user">
           <span className="sider-user-name">{demoAccount.name}</span>
           <span className="sider-user-role">{demoAccount.role}</span>
+        </div>
+        <button
+          type="button"
+          className="sider-logout"
+          disabled={signingOut}
+          onClick={onSignOut}
+        >
+          Logout
         </button>
       </div>
     </div>

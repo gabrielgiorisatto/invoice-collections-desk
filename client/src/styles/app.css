@@ -106,24 +106,7 @@ body {
   align-items: flex-start;
   gap: 2px;
   width: 100%;
-  margin: 0;
-  padding: 10px 8px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-  color: inherit;
-  font: inherit;
-}
-.sider-user:hover { background: #F3F4F6; }
-.sider-user:focus-visible {
-  outline: 2px solid #2563EB;
-  outline-offset: 2px;
-}
-.sider-user:disabled {
-  cursor: wait;
-  opacity: 0.7;
+  padding: 10px 8px 6px;
 }
 .sider-user-name {
   font-size: 14px;
@@ -134,6 +117,29 @@ body {
   font-size: 12px;
   font-weight: 500;
   color: #6B7280;
+}
+.sider-logout {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1D4ED8;
+}
+.sider-logout:hover { background: #F3F4F6; }
+.sider-logout:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+}
+.sider-logout:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 .mobile-bar {
   display: flex;
