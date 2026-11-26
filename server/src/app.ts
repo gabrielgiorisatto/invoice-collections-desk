@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import path from 'node:path'
 import express from 'express'
 import type { Database } from './database.ts'
 import { handleRequest } from './sessions.ts'
@@ -28,7 +29,7 @@ async function sendResponse(res: ServerResponse, response: Response) {
   res.end(Buffer.from(await response.arrayBuffer()))
 }
 
-export function createApp(db: Database) {
+export function createApp(db: Database, clientDist?: string) {
   const app = express()
   app.use(async (req, res, next) => {
     if (!req.url?.startsWith('/api/')) return next()
@@ -38,5 +39,11 @@ export function createApp(db: Database) {
       next(error)
     }
   })
+  if (clientDist) {
+    app.use(express.static(clientDist, { index: false }))
+    app.get(['/', '/desk', '/desk/'], (_req, res) => {
+      res.sendFile(path.join(clientDist, 'index.html'))
+    })
+  }
   return app
 }

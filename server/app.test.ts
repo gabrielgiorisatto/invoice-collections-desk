@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { createApp } from './src/app.ts'
 import { openMemoryDatabase } from './src/sqlite-store.ts'
-import { availableActions, priorityTier, seedInvoiceIds } from '../domain/index.ts'
+import { availableActions, demoAccount, priorityTier, seedInvoiceIds } from '../domain/index.ts'
 import { parseChange } from './src/sessions.ts'
 
 async function sessionApp() {
   const { db, close } = openMemoryDatabase()
   const app = createApp(db)
-  const first = await request(app).get('/api/invoices')
-  const cookie = first.headers['set-cookie'][0].split(';')[0]
+  const login = await request(app).post('/api/login').send({
+    username: demoAccount.username,
+    password: demoAccount.password,
+  })
+  const cookie = login.headers['set-cookie'][0].split(';')[0]
+  const first = await request(app).get('/api/invoices').set('Cookie', cookie)
   return {
     app,
     cookie,
@@ -19,15 +23,45 @@ async function sessionApp() {
 }
 
 describe('invoices API', () => {
-  it('returns seeded invoices and sets a session cookie', async () => {
-    const { app, close } = await sessionApp()
+  it('keeps the desk closed until the demo login sets a session cookie', async () => {
+    const { db, close } = openMemoryDatabase()
+    const app = createApp(db)
     try {
-      const response = await request(app).get('/api/invoices')
+      const anon = await request(app).get('/api/session')
+      expect(anon.status).toBe(200)
+      expect(anon.body.authenticated).toBe(false)
+
+      const blocked = await request(app).get('/api/invoices')
+      expect(blocked.status).toBe(401)
+      expect(blocked.headers['set-cookie']).toBeUndefined()
+
+      const blockedPatch = await request(app)
+        .patch(`/api/invoices/${seedInvoiceIds.Brook}`)
+        .send({ type: 'follow-up', value: { note: 'Called AP', channel: 'Phone', answered: false } })
+      expect(blockedPatch.status).toBe(401)
+
+      const bad = await request(app).post('/api/login').send({ username: 'operator', password: 'nope' })
+      expect(bad.status).toBe(401)
+      expect(bad.headers['set-cookie']).toBeUndefined()
+
+      const login = await request(app).post('/api/login').send({
+        username: demoAccount.username,
+        password: demoAccount.password,
+      })
+      expect(login.status).toBe(200)
+      expect(login.headers['set-cookie']?.[0]).toMatch(/collections_demo=/)
+      expect(login.headers['set-cookie']?.[0]).toMatch(/HttpOnly/)
+      expect(login.headers['set-cookie']?.[0]).toMatch(/SameSite=Lax/)
+      const cookie = login.headers['set-cookie'][0].split(';')[0]
+
+      const session = await request(app).get('/api/session').set('Cookie', cookie)
+      expect(session.body.authenticated).toBe(true)
+
+      const response = await request(app).get('/api/invoices').set('Cookie', cookie)
       expect(response.status).toBe(200)
       expect(response.body.invoices.map((item: { code: string }) => item.code)).toEqual([
         'Aster', 'Brook', 'Crest', 'Dune', 'East', 'Grove',
       ])
-      expect(response.headers['set-cookie']?.[0]).toMatch(/collections_demo=/)
     } finally {
       close()
     }

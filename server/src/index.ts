@@ -1,6 +1,5 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import express from 'express'
 import { createServer as createViteServer } from 'vite'
 import { createApp } from './app.ts'
 import { openFileDatabase } from './sqlite-store.ts'
@@ -11,13 +10,9 @@ const port = Number(process.env.PORT) || 5173
 const production = process.env.NODE_ENV === 'production'
 
 const { db, close } = openFileDatabase()
-const app = createApp(db)
+const app = createApp(db, production ? path.join(clientRoot, 'dist') : undefined)
 
-if (production) {
-  const dist = path.join(clientRoot, 'dist')
-  app.use(express.static(dist, { index: false }))
-  app.get(['/', '/desk', '/desk/'], (_req, res) => res.sendFile(path.join(dist, 'index.html')))
-} else {
+if (!production) {
   const vite = await createViteServer({
     root: clientRoot,
     server: { middlewareMode: true },

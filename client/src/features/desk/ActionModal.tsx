@@ -120,6 +120,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
       onOk={submit}
       confirmLoading={saving}
       destroyOnClose
+      width="min(520px, calc(100vw - 32px))"
       okText={catalog.confirm}
       okButtonProps={{ 'aria-label': catalog.confirm }}
       cancelButtonProps={{ 'aria-label': 'Cancel' }}

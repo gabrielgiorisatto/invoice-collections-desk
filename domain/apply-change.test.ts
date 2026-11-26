@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyChange } from './apply-change.ts'
 import {
-  demoDay,
   inActiveQueue,
   priorityTier,
   promiseStatus,
