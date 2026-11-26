@@ -84,21 +84,21 @@ export function explainPriority(invoice: Invoice) {
   switch (tier) {
     case 'P0':
       if (promise === 'broken') {
-        return { tier, reason: 'Broken promise — committed cash failed; escalate follow-up.' }
+        return { tier, reason: 'Broken promise — escalate follow-up.' }
       }
       if (neverContacted(invoice) && disputeStatus(invoice) !== 'open') {
-        return { tier, reason: 'Never contacted, no open dispute — cheap first touch before aging worsens.' }
+        return { tier, reason: 'No contact yet — first follow-up.' }
       }
-      return { tier, reason: 'Invoice accuracy unverified — clarify details before hard chase.' }
+      return { tier, reason: 'InvoiceAccuracy unverified — verify before chase.' }
     case 'P1':
       if (disputeStatus(invoice) === 'open') {
-        return { tier, reason: 'Open dispute — route or evidence, not a cold reminder.' }
+        return { tier, reason: 'Open dispute — not a cold chase.' }
       }
-      return { tier, reason: 'Escalation-ready — unanswered follow-ups with account manager available.' }
+      return { tier, reason: 'Unanswered follow-ups — AM available.' }
     case 'P2':
-      return { tier, reason: 'Active promise not due — monitor; do not burn a morning slot.' }
+      return { tier, reason: 'Active promise — wait.' }
     case 'P3':
-      return { tier, reason: 'No remaining balance (or resolved) — not chase work.' }
+      return { tier, reason: 'Remaining is 0 — out of queue.' }
     default: {
       const _exhaustive: never = tier
       return _exhaustive

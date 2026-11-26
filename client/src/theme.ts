@@ -1,39 +1,48 @@
 import type { ThemeConfig } from 'antd'
 
-/** Sober finance-ops theme — forest/slate, not purple AI defaults. */
 export const deskTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#1f5c45',
-    colorInfo: '#2f4d7a',
-    colorSuccess: '#1f5c45',
-    colorWarning: '#8a5a12',
-    colorError: '#8f2f2a',
-    colorText: '#14231c',
-    colorTextSecondary: '#4a5c52',
-    colorBorder: '#c5d0c9',
-    colorBgLayout: '#eef1f0',
-    colorBgContainer: '#ffffff',
-    borderRadius: 6,
+    colorPrimary: '#0B1F33',
+    colorInfo: '#123A56',
+    colorSuccess: '#1B7F4A',
+    colorWarning: '#B45309',
+    colorError: '#B91C1C',
+    colorText: '#0F172A',
+    colorTextSecondary: '#64748B',
+    colorBorder: '#D8DEE6',
+    colorBorderSecondary: '#D8DEE6',
+    colorBgLayout: '#F4F6F8',
+    colorBgContainer: '#FFFFFF',
+    colorBgElevated: '#FFFFFF',
+    colorFillAlter: '#F4F6F8',
+    borderRadius: 4,
     fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
     fontSize: 14,
+    controlHeight: 36,
   },
   components: {
     Layout: {
-      headerBg: '#ffffff',
-      headerHeight: 64,
+      headerBg: '#FFFFFF',
+      headerHeight: 56,
       headerPadding: '0 24px',
-      bodyBg: '#eef1f0',
+      bodyBg: '#F4F6F8',
     },
     Table: {
-      headerBg: '#f3f6f4',
-      rowHoverBg: '#f2f6f3',
+      headerBg: '#F4F6F8',
+      rowHoverBg: '#EEF2F6',
+      borderColor: '#D8DEE6',
     },
     Card: {
-      headerFontSize: 16,
+      headerFontSize: 15,
+      paddingLG: 16,
     },
     Tag: {
-      defaultBg: '#e8eee9',
-      defaultColor: '#345041',
+      defaultBg: '#EEF2F6',
+      defaultColor: '#123A56',
+      borderRadiusSM: 2,
+    },
+    Descriptions: {
+      labelBg: '#F4F6F8',
     },
   },
 }
