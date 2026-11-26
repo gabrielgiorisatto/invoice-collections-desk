@@ -1,9 +1,10 @@
 import type { Change, Invoice } from './model.ts'
-import { disputeStatus, inActiveQueue, promiseStatus, remaining } from './rules.ts'
+import { disputeStatus, inActiveQueue, promiseStatus, remaining, settlement } from './rules.ts'
 
 export type ActionKind = Change['type']
 
-const displayOrder: ActionKind[] = [
+/** Fixed UI order for the full action set (enabled + disabled). */
+export const actionDisplayOrder: ActionKind[] = [
   'follow-up',
   'promise',
   'payment',
@@ -47,7 +48,7 @@ export function availableActions(invoice: Invoice): ActionKind[] {
 
   if (remaining(invoice) > 0) allowed.add('payment')
 
-  return displayOrder.filter(kind => allowed.has(kind))
+  return actionDisplayOrder.filter(kind => allowed.has(kind))
 }
 
 export function primaryActionKind(invoice: Invoice): ActionKind | null {
@@ -62,6 +63,37 @@ export function primaryActionKind(invoice: Invoice): ActionKind | null {
           : invoice.invoiceAccuracy === 'unverified_claim' ? ['verify-accuracy', 'dispute', 'payment']
             : ['follow-up', 'promise', 'dispute', 'verify-accuracy', 'payment']
   return preferred.find(kind => allowed.includes(kind)) ?? allowed[0]
+}
+
+/** Why an action is disabled for this invoice, or null when enabled. */
+export function actionDisabledReason(invoice: Invoice, kind: ActionKind): string | null {
+  if (availableActions(invoice).includes(kind)) return null
+
+  if (!inActiveQueue(invoice)) {
+    return settlement(invoice) === 'paid'
+      ? 'Invoice is paid — no further actions.'
+      : 'Invoice is resolved — no further actions.'
+  }
+
+  const promise = promiseStatus(invoice)
+  const dispute = disputeStatus(invoice)
+
+  if (dispute === 'open') {
+    return 'Not available while a dispute is open.'
+  }
+  if (promise === 'active') {
+    return 'Not available while a payment promise is active. Record payment or resolve.'
+  }
+  if (promise === 'broken') {
+    return 'Broken promise — use follow-up, a new promise, or payment.'
+  }
+  if (invoice.invoiceAccuracy === 'unverified_claim') {
+    return 'Verify invoice details before chasing, or mark a dispute.'
+  }
+  if (kind === 'route-am') return 'Route to account manager is for open disputes.'
+  if (kind === 'resolve') return 'Resolve is for active promises or open disputes.'
+  if (kind === 'payment') return 'Nothing remaining to pay.'
+  return 'Not available for this invoice state.'
 }
 
 export const actionCatalog: Record<ActionKind, { label: string; hint: string; purpose: string; confirm: string }> = {
@@ -80,31 +112,31 @@ export const actionCatalog: Record<ActionKind, { label: string; hint: string; pu
   payment: {
     label: 'Payment received',
     hint: 'Attest cash (full or partial).',
-    purpose: 'Record operator-attested cash against Remaining. Full pay leaves the queue.',
+    purpose: 'Record cash against remaining balance. Paying in full leaves the queue.',
     confirm: 'Save payment',
   },
   resolve: {
     label: 'Resolve (not paid)',
     hint: 'Leave queue without cash.',
-    purpose: 'Close the invoice commercially without counting payment. Requires ResolutionReason.',
+    purpose: 'Close the invoice commercially without counting payment. Choose a resolution reason.',
     confirm: 'Resolve invoice',
   },
   dispute: {
     label: 'Mark dispute',
     hint: 'Open or update a commercial dispute.',
-    purpose: 'Flag DisputeStatus so this is not treated as a cold chase.',
+    purpose: 'Flag a commercial dispute so this is not treated as a cold chase.',
     confirm: 'Save dispute',
   },
   'route-am': {
-    label: 'Route to AM',
+    label: 'Route to account manager',
     hint: 'Simulation — hand off to account manager.',
-    purpose: 'Labeled simulation only. Sets OwnerRole to account_manager with a next-action note.',
+    purpose: 'Labeled simulation only. Hands ownership to the account manager with a next-action note.',
     confirm: 'Route (simulation)',
   },
   'verify-accuracy': {
-    label: 'Verify accuracy',
+    label: 'Verify invoice details',
     hint: 'Confirm invoice details are correct.',
-    purpose: 'Clear InvoiceAccuracy unverified_claim after you confirm remittance details.',
+    purpose: 'Mark invoice details as verified after you confirm remittance information.',
     confirm: 'Mark verified',
   },
 }

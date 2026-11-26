@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   App,
-  Button,
   Descriptions,
   Drawer,
   Empty,
@@ -37,13 +36,20 @@ import {
   type Invoice,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
-import { invoiceStatusLabel } from './status.ts'
+import { invoiceStatus } from './status.ts'
 import { PriorityTag, StatusTag } from './tags.tsx'
 import ActionModal from './ActionModal.tsx'
-import { actionCatalog, availableActions, primaryActionKind, type ActionKind } from './primaryAction.ts'
+import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
+import {
+  invoiceAccuracyLabel,
+  invoiceDisputeLabel,
+  invoicePromiseLabel,
+  ownerLabel,
+} from './labels.ts'
+import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
-const { Text } = Typography
+const { Title, Text } = Typography
 
 const tierOrder = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
 
@@ -55,14 +61,76 @@ function money(amount: number) {
   }).format(amount)
 }
 
-
+function InvoiceDetailPanel({
+  invoice,
+  onAction,
+}: {
+  invoice: Invoice
+  onAction: (kind: ActionKind) => void
+}) {
+  return (
+    <div className="row-expand">
+      <Text type="secondary">{explainPriority(invoice).reason}</Text>
+      <Descriptions
+        size="small"
+        column={2}
+        style={{ marginTop: 12, marginBottom: 16 }}
+        items={[
+          {
+            key: 'remaining',
+            label: 'Remaining',
+            children: `${money(remaining(invoice))} of ${money(invoice.amount)}`,
+          },
+          {
+            key: 'overdue',
+            label: 'Overdue',
+            children: `${overdueDays(invoice)} days`,
+          },
+          {
+            key: 'promise',
+            label: 'Promise',
+            children: invoicePromiseLabel(invoice),
+          },
+          {
+            key: 'dispute',
+            label: 'Dispute',
+            children: invoiceDisputeLabel(invoice),
+          },
+          {
+            key: 'accuracy',
+            label: 'Invoice details',
+            children: invoiceAccuracyLabel(invoice),
+          },
+          {
+            key: 'owner',
+            label: 'Owner',
+            children: ownerLabel(invoice.ownerRole),
+          },
+          {
+            key: 'am',
+            label: 'Account manager',
+            children: invoice.accountManager,
+          },
+          {
+            key: 'followups',
+            label: 'Follow-ups',
+            children: invoice.followUps.length === 0 ? 'None' : String(invoice.followUps.length),
+          },
+        ]}
+      />
+      <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>Actions</Title>
+      <InvoiceActionButtons invoice={invoice} onAction={onAction} />
+    </div>
+  )
+}
 
 export default function DeskPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [drawerId, setDrawerId] = useState<string | null>(null)
+  const [expandedRowKeys, setExpandedRowKeys] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
-  const [actionKind, setActionKind] = useState<ActionKind | null>(null)
+  const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
   const { message } = App.useApp()
 
   useEffect(() => {
@@ -90,7 +158,8 @@ export default function DeskPage() {
         || overdueDays(b) - overdueDays(a),
     )
   }, [invoices])
-  const selected = invoices?.find(item => item.id === selectedId) ?? null
+  const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
+  const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
 
   const kpis = useMemo(() => {
     if (!invoices) {
@@ -107,46 +176,87 @@ export default function DeskPage() {
     }
   }, [invoices])
 
+  function openAction(invoiceId: string, kind: ActionKind) {
+    setActionTarget({ id: invoiceId, kind })
+  }
+
   const columns: ColumnsType<Invoice> = [
     {
       title: 'Invoice',
       key: 'invoice',
       render: (_value, row) => (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <FileTextOutlined style={{ marginTop: 4, color: '#6B7280' }} />
-          <div>
-            <div><Text strong>{row.code}</Text></div>
-            <Text type="secondary" style={{ fontSize: 12 }}>{row.customer}</Text>
-          </div>
-        </div>
+        <Space align="start" size={8}>
+          <FileTextOutlined style={{ marginTop: 4, color: 'rgba(0,0,0,0.45)' }} />
+          <span>
+            <Text strong>{row.code}</Text>
+            <br />
+            <Text type="secondary">{row.customer}</Text>
+          </span>
+        </Space>
       ),
     },
     {
       title: 'Remaining',
       key: 'remaining',
       align: 'right',
-      width: 120,
-      render: (_value, row) => money(remaining(row)),
+      width: 110,
+      render: (_value, row) => <Text>{money(remaining(row))}</Text>,
     },
     {
       title: 'Overdue',
       key: 'overdue',
-      width: 90,
-      render: (_value, row) => `${overdueDays(row)}d`,
+      width: 88,
+      render: (_value, row) => <Text>{`${overdueDays(row)}d`}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 80,
+      width: 88,
       render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
+      width: 150,
+      render: (_value, row) => {
+        const status = invoiceStatus(row)
+        return <StatusTag kind={status.kind} label={status.label} />
+      },
+    },
+    {
+      title: 'Promise',
+      key: 'promise',
+      width: 96,
+      render: (_value, row) => <Text>{invoicePromiseLabel(row)}</Text>,
+    },
+    {
+      title: 'Dispute',
+      key: 'dispute',
+      width: 96,
+      render: (_value, row) => <Text>{invoiceDisputeLabel(row)}</Text>,
+    },
+    {
+      title: 'Invoice details',
+      key: 'accuracy',
       width: 140,
-      render: (_value, row) => <StatusTag label={invoiceStatusLabel(row)} />,
+      render: (_value, row) => <Text>{invoiceAccuracyLabel(row)}</Text>,
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 120,
+      fixed: 'right',
+      render: (_value, row) => (
+        <InvoiceRowMenu
+          invoice={row}
+          onAction={kind => openAction(row.id, kind)}
+          onDetails={() => setDrawerId(row.id)}
+        />
+      ),
     },
   ]
+
+  const pageTitle = nav === 'guide' ? 'Guide' : nav === 'queue' ? 'Queue' : 'Desk'
 
   return (
     <Layout style={{ minHeight: '100%' }}>
@@ -166,8 +276,8 @@ export default function DeskPage() {
             { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
           ]}
         />
-        <div style={{ padding: '12px 16px', color: '#9CA3AF', fontSize: 12 }}>
-          Demo {demoDay}
+        <div style={{ padding: '12px 16px' }}>
+          <Text type="secondary">Demo {demoDay}</Text>
         </div>
       </Sider>
 
@@ -183,7 +293,7 @@ export default function DeskPage() {
           {invoices ? (
             <>
               <div className="desk-title-row">
-                <h1>{nav === 'guide' ? 'Guide' : nav === 'queue' ? 'Queue' : 'Desk'}</h1>
+                <Title level={2} style={{ margin: 0 }}>{pageTitle}</Title>
                 <Text type="secondary">
                   Payments {money(totalPayments(invoices))} · Follow-ups {totalFollowUps(invoices)} · {morningCapacity} slots
                 </Text>
@@ -200,26 +310,29 @@ export default function DeskPage() {
                 <>
                   <div className="kpi-row">
                     <div className="kpi-card">
-                      <div className="label">Open Remaining</div>
+                      <Text type="secondary" className="kpi-label">Open remaining</Text>
                       <div className="value accent">{money(kpis.openRemaining)}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Next up</div>
+                      <Text type="secondary" className="kpi-label">Next up</Text>
                       <div className="value">{kpis.todayCount}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Broken promises</div>
+                      <Text type="secondary" className="kpi-label">Broken promises</Text>
                       <div className="value warn">{kpis.broken}</div>
                     </div>
                     <div className="kpi-card">
-                      <div className="label">Disputed</div>
+                      <Text type="secondary" className="kpi-label">Disputed</Text>
                       <div className="value danger">{kpis.disputed}</div>
                     </div>
                   </div>
 
                   {nav === 'desk' ? (
                     <section className="section-block" aria-labelledby="next-up">
-                      <h2 id="next-up"><FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />Next up</h2>
+                      <Title level={4} id="next-up" style={{ marginTop: 0 }}>
+                        <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />
+                        Next up
+                      </Title>
                       {picks.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
                       ) : (
@@ -231,17 +344,21 @@ export default function DeskPage() {
                                 key={invoice.id}
                                 type="button"
                                 className="today-card"
-                                aria-current={selectedId === invoice.id}
-                                onClick={() => setSelectedId(invoice.id)}
+                                onClick={() => {
+                                  setExpandedRowKeys([invoice.id])
+                                  setDrawerId(null)
+                                }}
                               >
                                 <span style={{ minWidth: 0, width: '100%' }}>
-                                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                    <FileTextOutlined style={{ color: '#6B7280' }} />
-                                    <span className="code">{invoice.code}</span>
+                                  <Space size={8} wrap>
+                                    <FileTextOutlined style={{ color: 'rgba(0,0,0,0.45)' }} />
+                                    <Text strong>{invoice.code}</Text>
                                     <PriorityTag tier={tier} />
+                                  </Space>
+                                  <div>
+                                    <Text>{money(remaining(invoice))} remaining</Text>
                                   </div>
-                                  <div className="amt">{money(remaining(invoice))} Remaining</div>
-                                  <div className="why">{reason}</div>
+                                  <Text type="secondary">{reason}</Text>
                                 </span>
                               </button>
                             )
@@ -252,8 +369,10 @@ export default function DeskPage() {
                   ) : null}
 
                   <section className="queue-panel" aria-labelledby="queue-heading">
-                    <div className="head" id="queue-heading">
-                      {nav === 'queue' ? 'All invoices' : 'Queue'}
+                    <div className="head">
+                      <Title level={4} id="queue-heading" style={{ margin: 0 }}>
+                        {nav === 'queue' ? 'All invoices' : 'Queue'}
+                      </Title>
                     </div>
                     <Table
                       rowKey="id"
@@ -261,10 +380,17 @@ export default function DeskPage() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      onRow={record => ({
-                        onClick: () => setSelectedId(record.id),
-                        style: { cursor: 'pointer' },
-                      })}
+                      scroll={{ x: 1100 }}
+                      expandable={{
+                        expandedRowKeys,
+                        onExpandedRowsChange: keys => setExpandedRowKeys(keys as string[]),
+                        expandedRowRender: record => (
+                          <InvoiceDetailPanel
+                            invoice={record}
+                            onAction={kind => openAction(record.id, kind)}
+                          />
+                        ),
+                      }}
                       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Queue empty" /> }}
                     />
                   </section>
@@ -276,85 +402,38 @@ export default function DeskPage() {
       </Layout>
 
       <Drawer
-        title={selected ? selected.code : 'Invoice'}
-        open={Boolean(selected)}
-        onClose={() => setSelectedId(null)}
+        title={drawerInvoice ? drawerInvoice.code : 'Invoice'}
+        open={Boolean(drawerInvoice)}
+        onClose={() => setDrawerId(null)}
         width={420}
         destroyOnClose
       >
-        {selected ? (
+        {drawerInvoice ? (
           <>
-            <div style={{ marginBottom: 12 }}>
-              <Text type="secondary">{selected.customer}</Text>
+            <Text type="secondary">{drawerInvoice.customer}</Text>
+            <div style={{ marginTop: 12, marginBottom: 12 }}>
+              <Space wrap>
+                <PriorityTag tier={priorityTier(drawerInvoice)} />
+                {(() => {
+                  const status = invoiceStatus(drawerInvoice)
+                  return <StatusTag kind={status.kind} label={status.label} />
+                })()}
+              </Space>
             </div>
-            <div style={{ marginBottom: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <PriorityTag tier={priorityTier(selected)} />
-              <StatusTag label={invoiceStatusLabel(selected)} />
-            </div>
-            <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-              {explainPriority(selected).reason}
-            </Text>
-            <Descriptions
-              size="small"
-              column={1}
-              bordered
-              items={[
-                {
-                  key: 'remaining',
-                  label: 'Remaining',
-                  children: `${money(remaining(selected))} / ${money(selected.amount)}`,
-                },
-                { key: 'promise', label: 'PromiseStatus', children: promiseStatus(selected) },
-                { key: 'dispute', label: 'DisputeStatus', children: disputeStatus(selected) },
-                { key: 'accuracy', label: 'InvoiceAccuracy', children: selected.invoiceAccuracy },
-                { key: 'owner', label: 'OwnerRole', children: selected.ownerRole },
-                { key: 'am', label: 'Account manager', children: selected.accountManager },
-                { key: 'overdue', label: 'Overdue', children: `${overdueDays(selected)} days` },
-                {
-                  key: 'followups',
-                  label: 'Follow-ups',
-                  children: selected.followUps.length === 0 ? 'None' : String(selected.followUps.length),
-                },
-              ]}
+            <InvoiceDetailPanel
+              invoice={drawerInvoice}
+              onAction={kind => openAction(drawerInvoice.id, kind)}
             />
-            {(() => {
-              const actions = availableActions(selected)
-              const primary = primaryActionKind(selected)
-              if (!actions.length) {
-                return <Alert style={{ marginTop: 16 }} type="success" showIcon message="Out of active queue" />
-              }
-              return (
-                <Space direction="vertical" style={{ width: '100%', marginTop: 16 }} size={12}>
-                  {actions.map(kind => {
-                    const meta = actionCatalog[kind]
-                    const isPrimary = kind === primary
-                    return (
-                      <div key={kind}>
-                        <Button
-                          type={isPrimary ? 'primary' : 'default'}
-                          danger={kind === 'resolve' && !isPrimary}
-                          block
-                          onClick={() => setActionKind(kind)}
-                        >
-                          {meta.label}
-                        </Button>
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#6B7280' }}>{meta.hint}</div>
-                      </div>
-                    )
-                  })}
-                </Space>
-              )
-            })()}
           </>
         ) : null}
       </Drawer>
 
-      {selected && actionKind ? (
+      {actionInvoice && actionTarget ? (
         <ActionModal
-          invoice={selected}
-          kind={actionKind}
+          invoice={actionInvoice}
+          kind={actionTarget.kind}
           open
-          onClose={() => setActionKind(null)}
+          onClose={() => setActionTarget(null)}
           onSaved={items => {
             setInvoices(items)
             message.success('Saved')

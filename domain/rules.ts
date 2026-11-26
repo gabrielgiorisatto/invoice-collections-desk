@@ -102,7 +102,7 @@ export function explainPriority(invoice: Invoice) {
       if (neverContacted(invoice) && disputeStatus(invoice) !== 'open') {
         return { tier, reason: 'No contact yet — first follow-up.' }
       }
-      return { tier, reason: 'InvoiceAccuracy unverified — verify before chase.' }
+      return { tier, reason: 'Invoice details need verification before chase.' }
     case 'P1':
       if (disputeStatus(invoice) === 'open') {
         return { tier, reason: 'Open dispute — not a cold chase.' }

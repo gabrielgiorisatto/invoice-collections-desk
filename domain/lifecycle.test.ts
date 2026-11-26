@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { applyChange } from './apply-change.ts'
-import { availableActions, primaryActionKind } from './lifecycle.ts'
+import { actionDisabledReason, actionDisplayOrder, availableActions, primaryActionKind } from './lifecycle.ts'
 import { type Invoice } from './index.ts'
 import { seed, seedInvoiceIds } from './seed.ts'
 
@@ -59,5 +59,12 @@ describe('availableActions lifecycle matrix', () => {
     expect(result.errors).toHaveProperty('form')
     expect(result.invoices).toBe(invoices)
     expect(byCode(result.invoices, 'Crest').followUps).toHaveLength(1)
+  })
+
+  it('actionDisabledReason explains disabled kinds; null when enabled', () => {
+    const crest = byCode(seed(), 'Crest')
+    expect(actionDisabledReason(crest, 'payment')).toBeNull()
+    expect(actionDisabledReason(crest, 'follow-up')).toMatch(/promise is active/i)
+    expect(actionDisplayOrder).toHaveLength(7)
   })
 })

@@ -121,7 +121,7 @@ if (!inActiveQueue(invoice)) {
         ...invoice,
         invoiceAccuracy: 'ok',
       }
-      next = recordEvent(next, 'InvoiceAccuracy verified', note)
+      next = recordEvent(next, 'Invoice details verified', note)
       break
     }
     default: {

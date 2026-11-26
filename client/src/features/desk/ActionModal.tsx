@@ -3,6 +3,7 @@ import { Alert, Checkbox, Form, Input, InputNumber, Modal, Select, Typography } 
 import type { ActionKind, Change, Invoice, ResolutionReason } from '@domain/index.ts'
 import { actionCatalog, remaining } from '@domain/index.ts'
 import { patchInvoice } from '../../api/invoices.ts'
+import { disputeLabel, resolutionReasonLabel } from './labels.ts'
 
 type Props = {
   invoice: Invoice
@@ -88,7 +89,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
         {catalog.purpose}
       </Typography.Paragraph>
       {kind === 'route-am' ? (
-        <Alert type="info" showIcon style={{ marginBottom: 12 }} message="Labeled simulation — no live AM system." />
+        <Alert type="info" showIcon style={{ marginBottom: 12 }} message="Labeled simulation — no live account manager system." />
       ) : null}
       {errors.form ? <Alert type="error" showIcon style={{ marginBottom: 12 }} message={errors.form} /> : null}
       <Form form={form} layout="vertical" requiredMark="optional">
@@ -127,12 +128,12 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
         ) : null}
         {kind === 'resolve' ? (
           <>
-            <Form.Item name="reason" label="ResolutionReason (required)" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item name="reason" label="Resolution reason (required)" rules={[{ required: true, message: 'Required' }]}>
               <Select
                 options={[
-                  { value: 'dispute_closed', label: 'dispute_closed' },
-                  { value: 'credit_issued', label: 'credit_issued' },
-                  { value: 'other', label: 'other' },
+                  { value: 'dispute_closed', label: resolutionReasonLabel('dispute_closed') },
+                  { value: 'credit_issued', label: resolutionReasonLabel('credit_issued') },
+                  { value: 'other', label: resolutionReasonLabel('other') },
                 ]}
               />
             </Form.Item>
@@ -149,8 +150,13 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
             <Form.Item name="evidence" label="Evidence">
               <Input />
             </Form.Item>
-            <Form.Item name="status" label="DisputeStatus (required)" rules={[{ required: true, message: 'Required' }]}>
-              <Select options={[{ value: 'open' }, { value: 'resolved' }]} />
+            <Form.Item name="status" label="Dispute status (required)" rules={[{ required: true, message: 'Required' }]}>
+              <Select
+                options={[
+                  { value: 'open', label: disputeLabel('open') },
+                  { value: 'resolved', label: disputeLabel('resolved') },
+                ]}
+              />
             </Form.Item>
           </>
         ) : null}

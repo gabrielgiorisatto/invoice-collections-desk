@@ -1,4 +1,5 @@
 import type { PriorityTier } from '@domain/index.ts'
+import type { StatusKind } from './status.ts'
 
 export function PriorityTag({ tier }: { tier: PriorityTier }) {
   const cls =
@@ -9,10 +10,10 @@ export function PriorityTag({ tier }: { tier: PriorityTier }) {
   return <span className={`solid-tag ${cls}`}>{tier}</span>
 }
 
-const statusClass: Record<string, string> = {
+const statusClass: Record<StatusKind, string> = {
   open: 'status-open',
   promised: 'status-promised',
-  'broken promise': 'status-broken',
+  broken: 'status-broken',
   disputed: 'status-disputed',
   unverified: 'status-unverified',
   partial: 'status-partial',
@@ -20,6 +21,6 @@ const statusClass: Record<string, string> = {
   resolved: 'status-resolved',
 }
 
-export function StatusTag({ label }: { label: string }) {
-  return <span className={`solid-tag ${statusClass[label] ?? 'status-open'}`}>{label}</span>
+export function StatusTag({ kind, label }: { kind: StatusKind; label: string }) {
+  return <span className={`solid-tag ${statusClass[kind]}`}>{label}</span>
 }

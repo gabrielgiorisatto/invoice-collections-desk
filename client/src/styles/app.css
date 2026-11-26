@@ -50,13 +50,6 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   gap: 12px;
   margin-bottom: 20px;
 }
-.desk-title-row h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: #111827;
-}
-
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -69,9 +62,8 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   border-radius: 10px;
   padding: 16px 18px;
 }
-.kpi-card .label {
-  font-size: 12px;
-  color: #6B7280;
+.kpi-card .kpi-label {
+  display: block;
   margin-bottom: 8px;
 }
 .kpi-card .value {
@@ -85,12 +77,6 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
 .kpi-card .value.danger { color: #DC2626; }
 
 .section-block { margin-bottom: 20px; }
-.section-block h2 {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-}
 
 .today-grid {
   display: grid;
@@ -114,10 +100,6 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   border-color: #2563EB;
   background: #EFF6FF;
 }
-.today-card .code { font-weight: 700; color: #111827; }
-.today-card .amt { margin-top: 2px; font-size: 13px; color: #374151; font-weight: 600; }
-.today-card .why { margin-top: 6px; font-size: 12px; color: #6B7280; line-height: 1.35; }
-
 .queue-panel {
   background: #FFFFFF;
   border: 1px solid #E5E7EB;
@@ -127,7 +109,18 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
 .queue-panel .head {
   padding: 14px 16px;
   border-bottom: 1px solid #E5E7EB;
-  font-weight: 600;
+}
+
+.row-expand {
+  max-width: 720px;
+  padding: 4px 8px 8px;
+}
+
+.action-hint {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 @media (max-width: 1100px) {
