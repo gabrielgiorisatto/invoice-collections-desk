@@ -124,11 +124,22 @@ export function explainPriority(invoice: Invoice) {
         return { tier, reason: 'No contact yet — first follow-up.' }
       }
       return { tier, reason: 'Invoice details need verification before chase.' }
-    case 'P1':
-      if (disputeStatus(invoice) === 'open') {
+    case 'P1': {
+      const dispute = disputeStatus(invoice)
+      if (dispute === 'open') {
         return { tier, reason: 'Open dispute — not a cold chase.' }
       }
-      return { tier, reason: 'Unanswered follow-ups — AM available.' }
+      if (dispute === 'resolved' && invoice.followUps.length > 0) {
+        return { tier, reason: 'Answered follow-ups — dispute closed.' }
+      }
+      if (unansweredFollowUps(invoice) >= 2 && invoice.accountManager) {
+        return { tier, reason: 'Unanswered follow-ups — AM available.' }
+      }
+      if (invoice.followUps.some(item => item.answered)) {
+        return { tier, reason: 'Answered follow-ups — still in the queue.' }
+      }
+      return { tier, reason: 'Still in the queue.' }
+    }
     case 'P2':
       return { tier, reason: 'Active promise — wait.' }
     case 'P3':

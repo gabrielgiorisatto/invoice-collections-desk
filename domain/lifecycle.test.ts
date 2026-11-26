@@ -162,4 +162,31 @@ describe('availableActions lifecycle matrix', () => {
     expect(aster.followUps).toHaveLength(before)
     expect(aster.history?.[0]?.title).toMatch(/routed to am/i)
   })
+
+  it('recomputes Next up after Aster’s dispute is cancelled and follow-ups are answered', () => {
+    const cancelled = applyChange(seed(), seedInvoiceIds.Aster, {
+      type: 'cancel-dispute',
+      value: { note: 'Quantity confirmed.' },
+    })
+    expect(cancelled.errors).toEqual({})
+    const first = applyChange(cancelled.invoices, seedInvoiceIds.Aster, {
+      type: 'follow-up',
+      value: { note: 'okok', channel: 'Email', answered: false },
+    })
+    const second = applyChange(first.invoices, seedInvoiceIds.Aster, {
+      type: 'follow-up',
+      value: { note: 'okok', channel: 'Email', answered: false },
+    })
+    const aster = byCode(second.invoices, 'Aster')
+    expect(disputeStatus(aster)).toBe('resolved')
+    expect(aster.followUps.map(item => `${item.channel} · ${item.note}`)).toEqual([
+      'Email · okok',
+      'Email · okok',
+    ])
+    const reason = explainPriority(aster).reason
+    expect(reason).toBe('Answered follow-ups — dispute closed.')
+    expect(reason).not.toMatch(/unanswered/i)
+    expect(reason).not.toMatch(/open dispute/i)
+    expect(explainPriority(byCode(seed(), 'East')).reason).toBe('Unanswered follow-ups — AM available.')
+  })
 })
