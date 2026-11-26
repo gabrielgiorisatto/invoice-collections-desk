@@ -1,5 +1,19 @@
 import { demoDay, morningCapacity, type Invoice, type PriorityTier, type PromiseStatus, type Settlement } from './model.ts'
 
+
+export function validDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value))
+    && new Date(value + 'T12:00:00.000Z').toISOString().slice(0, 10) === value
+}
+
+export function totalPayments(invoices: Invoice[]) {
+  return invoices.reduce((sum, invoice) => sum + invoice.payments.reduce((s, p) => s + p.amount, 0), 0)
+}
+
+export function totalFollowUps(invoices: Invoice[]) {
+  return invoices.reduce((sum, invoice) => sum + invoice.followUps.length, 0)
+}
+
 export function daysBetween(start: string, end: string) {
   return (Date.parse(end) - Date.parse(start)) / 86_400_000
 }
@@ -53,13 +67,12 @@ export function priorityTier(invoice: Invoice): PriorityTier {
   const dispute = disputeStatus(invoice)
 
   if (promise === 'broken') return 'P0'
+  if (promise === 'active') return 'P2'
   if (neverContacted(invoice) && dispute !== 'open') return 'P0'
   if (invoice.invoiceAccuracy === 'unverified_claim') return 'P0'
 
   if (unansweredFollowUps(invoice) >= 2 && invoice.accountManager) return 'P1'
   if (dispute === 'open') return 'P1'
-
-  if (promise === 'active') return 'P2'
 
   return 'P1'
 }

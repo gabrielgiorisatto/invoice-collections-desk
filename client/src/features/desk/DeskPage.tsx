@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
+  App,
+  Button,
   Descriptions,
   Drawer,
   Empty,
   Layout,
   Menu,
+  Space,
   Spin,
   Table,
   Typography,
@@ -32,11 +35,15 @@ import {
   promiseStatus,
   remaining,
   todaysThree,
+  totalFollowUps,
+  totalPayments,
   type Invoice,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 import { invoiceStatusLabel } from './status.ts'
 import { PriorityTag, StatusTag } from './tags.tsx'
+import ActionModal from './ActionModal.tsx'
+import { primaryAction, type ActionModal as ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
@@ -66,6 +73,8 @@ export default function DeskPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
+  const [actionKind, setActionKind] = useState<ActionKind | null>(null)
+  const { message } = App.useApp()
 
   useEffect(() => {
     let alive = true
@@ -183,7 +192,9 @@ export default function DeskPage() {
             <>
               <div className="desk-title-row">
                 <h1>{nav === 'guide' ? 'Guide' : nav === 'queue' ? 'Queue' : 'Desk'}</h1>
-                <Text type="secondary">{morningCapacity} Follow-up slots</Text>
+                <Text type="secondary">
+                  Payments {money(totalPayments(invoices))} · Follow-ups {totalFollowUps(invoices)} · {morningCapacity} slots
+                </Text>
               </div>
 
               {nav === 'guide' ? (
@@ -317,9 +328,42 @@ export default function DeskPage() {
                 },
               ]}
             />
+            {inActiveQueue(selected) ? (
+              <Space direction="vertical" style={{ width: '100%', marginTop: 16 }}>
+                {primaryAction(selected) ? (
+                  <Button type="primary" block onClick={() => setActionKind(primaryAction(selected)!.type)}>
+                    {primaryAction(selected)!.label}
+                  </Button>
+                ) : null}
+                <Space wrap>
+                  <Button onClick={() => setActionKind('follow-up')}>Follow-up</Button>
+                  <Button onClick={() => setActionKind('promise')}>Promise</Button>
+                  <Button onClick={() => setActionKind('payment')}>Payment</Button>
+                  <Button onClick={() => setActionKind('dispute')}>Dispute</Button>
+                  <Button onClick={() => setActionKind('route-am')}>Route to AM</Button>
+                  <Button onClick={() => setActionKind('verify-accuracy')}>Verify</Button>
+                  <Button danger onClick={() => setActionKind('resolve')}>Resolve</Button>
+                </Space>
+              </Space>
+            ) : (
+              <Alert style={{ marginTop: 16 }} type="success" showIcon message="Out of active queue" />
+            )}
           </>
         ) : null}
       </Drawer>
+
+      {selected && actionKind ? (
+        <ActionModal
+          invoice={selected}
+          kind={actionKind}
+          open
+          onClose={() => setActionKind(null)}
+          onSaved={items => {
+            setInvoices(items)
+            message.success('Saved')
+          }}
+        />
+      ) : null}
     </Layout>
   )
 }

@@ -1,3 +1,4 @@
 export * from './model.ts'
 export * from './rules.ts'
 export { seed, seedInvoiceIds } from './seed.ts'
+export { applyChange } from './apply-change.ts'
