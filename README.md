@@ -7,13 +7,14 @@ Public take-home repo for an Invoice Collections Desk. **Product build is paused
 - Tracker: GitHub Issues · Agent file: [`AGENTS.md`](AGENTS.md)
 - Persistence: SQLite + cookie sessions
 - Partials: **in scope**; cash only via explicit payment received
-- Outcome: morning actions that keep queue state honest
+- Ranking: priority tiers P0–P3 ([ADR-0001](docs/adr/0001-priority-tiers-not-points.md)); payments do not consume follow-up slots
+- UI: professional finance-ops desk; first viewport = Today’s 3
 
 ## What's here now
 
 - **Matt Pocock skills** under [`.agents/skills/`](.agents/skills/) ([`skills-lock.json`](skills-lock.json))
 - **Agent config**: [`AGENTS.md`](AGENTS.md), [`docs/agents/`](docs/agents/)
-- **Domain docs**: [`docs/adr/`](docs/adr/) reserved; `GLOSSARY.md` on next grill write pass
+- **Domain docs**: [`GLOSSARY.md`](GLOSSARY.md), [`docs/adr/`](docs/adr/)
 
 ## Local note
 
@@ -23,4 +24,4 @@ npx skills@latest add mattpocock/skills -a cursor -y --skill '*'
 
 ## Next
 
-More grill answers in the Project chat → glossary/ADR write pass → then spec/tickets/implement when told. No desk implementation until then.
+More grill in the Project chat → further glossary/ADR updates → then spec/tickets/implement when told. No desk implementation until then.
