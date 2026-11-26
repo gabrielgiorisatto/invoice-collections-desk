@@ -1,80 +1,25 @@
-import type { ReactNode } from 'react'
 import { Tag } from 'antd'
 import {
-  CheckCircleOutlined,
   ExclamationCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import type { PriorityTier } from '@domain/index.ts'
 import type { StatusKind } from './status.ts'
 
+/** Plain priority code — no colored chip clutter in the table. */
 export function PriorityTag({ tier }: { tier: PriorityTier }) {
-  const color =
-    tier === 'P0' ? 'error'
-      : tier === 'P1' ? 'warning'
-        : tier === 'P2' ? 'processing'
-          : 'success'
-  return <Tag color={color}>{tier}</Tag>
+  return <span>{tier}</span>
 }
 
-type CueTone = 'success' | 'warning' | 'error' | 'default' | 'processing'
-
-function cueForStatus(kind: StatusKind): { color: CueTone; icon: ReactNode } {
+/** One subtle status tag; strong color only for truly bad states. */
+export function StatusTag({ kind, label }: { kind: StatusKind; label: string }) {
   switch (kind) {
     case 'broken':
     case 'disputed':
-      return { color: 'error', icon: <ExclamationCircleOutlined /> }
+      return <Tag color="error" icon={<ExclamationCircleOutlined />}>{label}</Tag>
     case 'unverified':
-      return { color: 'warning', icon: <WarningOutlined /> }
-    case 'promised':
-    case 'paid':
-    case 'resolved':
-      return { color: 'success', icon: <CheckCircleOutlined /> }
-    case 'partial':
-      return { color: 'processing', icon: <CheckCircleOutlined /> }
-    case 'open':
-      return { color: 'default', icon: null }
-    default: {
-      const _exhaustive: never = kind
-      return _exhaustive
-    }
+      return <Tag color="warning" icon={<WarningOutlined />}>{label}</Tag>
+    default:
+      return <Tag>{label}</Tag>
   }
-}
-
-export function StatusTag({ kind, label }: { kind: StatusKind; label: string }) {
-  const cue = cueForStatus(kind)
-  return (
-    <Tag color={cue.color} icon={cue.icon ?? undefined}>
-      {label}
-    </Tag>
-  )
-}
-
-const cueStyle = { whiteSpace: 'normal' as const, maxWidth: '100%', height: 'auto', lineHeight: 1.35, paddingBlock: 4 }
-
-export function PromiseCue({ label, tone }: { label: string; tone: 'none' | 'active' | 'broken' }) {
-  if (tone === 'broken') {
-    return <Tag color="error" icon={<ExclamationCircleOutlined />} style={cueStyle}>{label}</Tag>
-  }
-  if (tone === 'active') {
-    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
-  }
-  return <Tag style={cueStyle}>{label}</Tag>
-}
-
-export function DisputeCue({ label, tone }: { label: string; tone: 'none' | 'open' | 'resolved' }) {
-  if (tone === 'open') {
-    return <Tag color="error" icon={<ExclamationCircleOutlined />} style={cueStyle}>{label}</Tag>
-  }
-  if (tone === 'resolved') {
-    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
-  }
-  return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
-}
-
-export function AccuracyCue({ label, verified }: { label: string; verified: boolean }) {
-  if (verified) {
-    return <Tag color="success" icon={<CheckCircleOutlined />} style={cueStyle}>{label}</Tag>
-  }
-  return <Tag color="warning" icon={<WarningOutlined />} style={cueStyle}>{label}</Tag>
 }

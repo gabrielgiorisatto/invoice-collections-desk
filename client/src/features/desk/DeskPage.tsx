@@ -18,9 +18,11 @@ import type { ColumnsType } from 'antd/es/table'
 import {
   BookOutlined,
   DashboardOutlined,
+  ExclamationCircleOutlined,
   FileTextOutlined,
   FlagOutlined,
   UnorderedListOutlined,
+  WarningOutlined,
 } from '@ant-design/icons'
 import {
   activityTimeline,
@@ -44,20 +46,14 @@ import {
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
 import { invoiceStatus } from './status.ts'
-import {
-  AccuracyCue,
-  DisputeCue,
-  PriorityTag,
-  PromiseCue,
-  StatusTag,
-} from './tags.tsx'
+import { PriorityTag, StatusTag } from './tags.tsx'
 import ActionModal from './ActionModal.tsx'
 import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
 import {
-  accuracyDetailPhrase,
-  disputeDetailPhrase,
+  accuracyDetailValue,
+  disputeDetailValue,
   ownerLabel,
-  promiseDetailPhrase,
+  promiseDetailValue,
 } from './labels.ts'
 import type { ActionKind } from './primaryAction.ts'
 
@@ -74,24 +70,22 @@ function money(amount: number) {
   }).format(amount)
 }
 
-function StateCues({ invoice }: { invoice: Invoice }) {
-  const promise = promiseStatus(invoice)
-  const dispute = disputeStatus(invoice)
+function DetailValue({
+  text,
+  bad,
+}: {
+  text: string
+  bad?: 'error' | 'warning'
+}) {
+  const icon =
+    bad === 'error' ? <ExclamationCircleOutlined style={{ color: '#cf1322', marginRight: 6 }} />
+      : bad === 'warning' ? <WarningOutlined style={{ color: '#d48806', marginRight: 6 }} />
+        : null
   return (
-    <Space direction="vertical" size={8} style={{ width: '100%' }}>
-      <div>
-        <PromiseCue label={promiseDetailPhrase(invoice)} tone={promise === 'none' ? 'none' : promise} />
-      </div>
-      <div>
-        <DisputeCue label={disputeDetailPhrase(invoice)} tone={dispute === 'none' ? 'none' : dispute} />
-      </div>
-      <div>
-        <AccuracyCue
-          label={accuracyDetailPhrase(invoice)}
-          verified={invoice.invoiceAccuracy === 'ok'}
-        />
-      </div>
-    </Space>
+    <span>
+      {icon}
+      <Text>{text}</Text>
+    </span>
   )
 }
 
@@ -129,16 +123,15 @@ function InvoiceDetailPanel({
   invoice: Invoice
   onAction: (kind: ActionKind) => void
 }) {
+  const promise = promiseStatus(invoice)
+  const dispute = disputeStatus(invoice)
   return (
     <div className="row-expand">
       <Text type="secondary">{explainPriority(invoice).reason}</Text>
-      <div style={{ marginTop: 12, marginBottom: 12 }}>
-        <StateCues invoice={invoice} />
-      </div>
       <Descriptions
         size="small"
         column={1}
-        style={{ marginBottom: 16 }}
+        style={{ marginTop: 12, marginBottom: 16 }}
         items={[
           {
             key: 'remaining',
@@ -149,6 +142,36 @@ function InvoiceDetailPanel({
             key: 'due',
             label: 'Due',
             children: formatDueDate(invoice),
+          },
+          {
+            key: 'promise',
+            label: 'Promise',
+            children: (
+              <DetailValue
+                text={promiseDetailValue(invoice)}
+                bad={promise === 'broken' ? 'error' : undefined}
+              />
+            ),
+          },
+          {
+            key: 'dispute',
+            label: 'Dispute',
+            children: (
+              <DetailValue
+                text={disputeDetailValue(invoice)}
+                bad={dispute === 'open' ? 'error' : undefined}
+              />
+            ),
+          },
+          {
+            key: 'accuracy',
+            label: 'Invoice details',
+            children: (
+              <DetailValue
+                text={accuracyDetailValue(invoice)}
+                bad={invoice.invoiceAccuracy === 'unverified_claim' ? 'warning' : undefined}
+              />
+            ),
           },
           {
             key: 'owner',
@@ -264,41 +287,11 @@ export default function DeskPage() {
     {
       title: 'Status',
       key: 'status',
-      width: 168,
+      width: 150,
       render: (_value, row) => {
         const status = invoiceStatus(row)
         return <StatusTag kind={status.kind} label={status.label} />
       },
-    },
-    {
-      title: 'Promise',
-      key: 'promise',
-      width: 200,
-      render: (_value, row) => {
-        const tone = promiseStatus(row)
-        return <PromiseCue label={promiseDetailPhrase(row)} tone={tone === 'none' ? 'none' : tone} />
-      },
-    },
-    {
-      title: 'Dispute',
-      key: 'dispute',
-      width: 220,
-      ellipsis: true,
-      render: (_value, row) => {
-        const tone = disputeStatus(row)
-        return <DisputeCue label={disputeDetailPhrase(row)} tone={tone === 'none' ? 'none' : tone} />
-      },
-    },
-    {
-      title: 'Invoice details',
-      key: 'accuracy',
-      width: 200,
-      render: (_value, row) => (
-        <AccuracyCue
-          label={accuracyDetailPhrase(row)}
-          verified={row.invoiceAccuracy === 'ok'}
-        />
-      ),
     },
     {
       title: '',
@@ -448,7 +441,7 @@ export default function DeskPage() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1500 }}
+                      scroll={{ x: 900 }}
                       onRow={record => ({
                         onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },

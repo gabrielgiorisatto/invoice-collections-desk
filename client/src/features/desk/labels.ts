@@ -80,16 +80,19 @@ export function resolutionReasonLabel(reason: ResolutionReason): string {
   }
 }
 
-/** Always-visible detail phrases — never bare Open / None / Verified alone. */
-export function promiseDetailPhrase(invoice: Invoice): string {
+/**
+ * Drawer value text (label is separate). Full wording, no “Promise:” prefix.
+ * Never bare Open / None / Verified alone.
+ */
+export function promiseDetailValue(invoice: Invoice): string {
   const status = promiseStatus(invoice)
   switch (status) {
     case 'none':
-      return 'Promise: No promise on file'
+      return 'No promise on file'
     case 'active':
-      return `Promise: Active — due ${invoice.promise!.dueDate}`
+      return `Active — due ${invoice.promise!.dueDate}`
     case 'broken':
-      return `Promise: Broken — due ${invoice.promise!.dueDate}`
+      return `Broken — due ${invoice.promise!.dueDate}`
     default: {
       const _exhaustive: never = status
       return _exhaustive
@@ -97,15 +100,15 @@ export function promiseDetailPhrase(invoice: Invoice): string {
   }
 }
 
-export function disputeDetailPhrase(invoice: Invoice): string {
+export function disputeDetailValue(invoice: Invoice): string {
   const status = disputeStatus(invoice)
   switch (status) {
     case 'none':
-      return 'Dispute: No dispute on file'
+      return 'No dispute on file'
     case 'open':
-      return `Dispute: Open — ${invoice.dispute!.reason}`
+      return `Open — ${invoice.dispute!.reason}`
     case 'resolved':
-      return `Dispute: Resolved — ${invoice.dispute!.reason}`
+      return `Resolved — ${invoice.dispute!.reason}`
     default: {
       const _exhaustive: never = status
       return _exhaustive
@@ -113,8 +116,8 @@ export function disputeDetailPhrase(invoice: Invoice): string {
   }
 }
 
-export function accuracyDetailPhrase(invoice: Invoice): string {
-  return `Invoice details: ${accuracyLabel(invoice.invoiceAccuracy)}`
+export function accuracyDetailValue(invoice: Invoice): string {
+  return accuracyLabel(invoice.invoiceAccuracy)
 }
 
 export function invoicePromiseLabel(invoice: Invoice): string {

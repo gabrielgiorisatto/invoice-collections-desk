@@ -19,7 +19,7 @@ export type StatusKind =
 const statusLabels: Record<StatusKind, string> = {
   open: 'Open',
   promised: 'Promised',
-  broken: 'Broken promise',
+  broken: 'Broken',
   disputed: 'Disputed',
   unverified: 'Needs verification',
   partial: 'Partial',
