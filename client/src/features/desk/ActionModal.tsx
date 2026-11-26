@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Alert, Checkbox, Form, Input, InputNumber, Modal, Select } from 'antd'
-import type { Change, Invoice, ResolutionReason } from '@domain/index.ts'
-import { remaining } from '@domain/index.ts'
+import { Alert, Checkbox, Form, Input, InputNumber, Modal, Select, Typography } from 'antd'
+import type { ActionKind, Change, Invoice, ResolutionReason } from '@domain/index.ts'
+import { actionCatalog, remaining } from '@domain/index.ts'
 import { patchInvoice } from '../../api/invoices.ts'
-import type { ActionModal as ActionKind } from './primaryAction.ts'
 
 type Props = {
   invoice: Invoice
@@ -13,20 +12,11 @@ type Props = {
   onSaved: (invoices: Invoice[]) => void
 }
 
-const titles: Record<ActionKind, string> = {
-  'follow-up': 'Record follow-up',
-  promise: 'Record promise',
-  payment: 'Payment received',
-  resolve: 'Resolve (not paid)',
-  dispute: 'Mark dispute',
-  'route-am': 'Route to AM (simulation)',
-  'verify-accuracy': 'Verify InvoiceAccuracy',
-}
-
 export default function ActionModal({ invoice, kind, open, onClose, onSaved }: Props) {
   const [form] = Form.useForm()
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const catalog = actionCatalog[kind]
 
   useEffect(() => {
     if (!open) return
@@ -86,60 +76,58 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
 
   return (
     <Modal
-      title={titles[kind]}
+      title={catalog.label}
       open={open}
       onCancel={onClose}
       onOk={submit}
       confirmLoading={saving}
       destroyOnClose
-      okText="Save"
+      okText={catalog.confirm}
     >
+      <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+        {catalog.purpose}
+      </Typography.Paragraph>
       {kind === 'route-am' ? (
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 12 }}
-          message="Labeled simulation — no live AM handoff."
-        />
+        <Alert type="info" showIcon style={{ marginBottom: 12 }} message="Labeled simulation — no live AM system." />
       ) : null}
       {errors.form ? <Alert type="error" showIcon style={{ marginBottom: 12 }} message={errors.form} /> : null}
-      <Form form={form} layout="vertical" requiredMark={false}>
+      <Form form={form} layout="vertical" requiredMark="optional">
         {kind === 'follow-up' ? (
           <>
-            <Form.Item name="note" label="Note" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input.TextArea rows={3} />
+            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
+              <Input.TextArea rows={3} placeholder="What did you do?" />
             </Form.Item>
-            <Form.Item name="channel" label="Channel" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item name="channel" label="Channel (required)" rules={[{ required: true, message: 'Required' }]}>
               <Select options={[{ value: 'Email' }, { value: 'Phone' }, { value: 'Portal' }]} />
             </Form.Item>
-            <Form.Item name="answered" valuePropName="checked">
-              <Checkbox>Answered</Checkbox>
+            <Form.Item name="answered" valuePropName="checked" label="Answered">
+              <Checkbox>Customer responded</Checkbox>
             </Form.Item>
           </>
         ) : null}
         {kind === 'promise' ? (
           <>
-            <Form.Item name="dueDate" label="Promise due date" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.dueDate ? 'error' : undefined} help={errors.dueDate}>
+            <Form.Item name="dueDate" label="Promise due date (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.dueDate ? 'error' : undefined} help={errors.dueDate}>
               <Input type="date" />
             </Form.Item>
-            <Form.Item name="note" label="Note" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
+            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
               <Input.TextArea rows={2} />
             </Form.Item>
           </>
         ) : null}
         {kind === 'payment' ? (
           <>
-            <Form.Item name="amount" label="Amount" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.amount ? 'error' : undefined} help={errors.amount}>
+            <Form.Item name="amount" label="Amount (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.amount ? 'error' : undefined} help={errors.amount}>
               <InputNumber min={0.01} step={1} style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="note" label="Note" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
-              <Input />
+            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
+              <Input placeholder="e.g. Wire reference" />
             </Form.Item>
           </>
         ) : null}
         {kind === 'resolve' ? (
           <>
-            <Form.Item name="reason" label="ResolutionReason" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item name="reason" label="ResolutionReason (required)" rules={[{ required: true, message: 'Required' }]}>
               <Select
                 options={[
                   { value: 'dispute_closed', label: 'dispute_closed' },
@@ -148,26 +136,26 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
                 ]}
               />
             </Form.Item>
-            <Form.Item name="note" label="Note" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
+            <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
               <Input.TextArea rows={2} />
             </Form.Item>
           </>
         ) : null}
         {kind === 'dispute' ? (
           <>
-            <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.reason ? 'error' : undefined} help={errors.reason}>
+            <Form.Item name="reason" label="Reason (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.reason ? 'error' : undefined} help={errors.reason}>
               <Input.TextArea rows={2} />
             </Form.Item>
             <Form.Item name="evidence" label="Evidence">
               <Input />
             </Form.Item>
-            <Form.Item name="status" label="DisputeStatus" rules={[{ required: true, message: 'Required' }]}>
+            <Form.Item name="status" label="DisputeStatus (required)" rules={[{ required: true, message: 'Required' }]}>
               <Select options={[{ value: 'open' }, { value: 'resolved' }]} />
             </Form.Item>
           </>
         ) : null}
         {kind === 'route-am' || kind === 'verify-accuracy' ? (
-          <Form.Item name="note" label="Note" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
+          <Form.Item name="note" label="Note (required)" rules={[{ required: true, message: 'Required' }]} validateStatus={errors.note ? 'error' : undefined} help={errors.note}>
             <Input.TextArea rows={3} />
           </Form.Item>
         ) : null}

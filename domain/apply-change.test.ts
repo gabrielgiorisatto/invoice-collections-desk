@@ -122,13 +122,13 @@ describe('applyChange dispute, AM route, verify (#6)', () => {
     expect(priorityTier(byCode(invoices, 'Aster'))).toBe('P1')
   })
 
-  it('routes to AM as labeled ownership change', () => {
-    const { invoices, errors } = applyChange(seed(), seedInvoiceIds.East, {
+  it('routes to AM as labeled ownership change on open dispute', () => {
+    const { invoices, errors } = applyChange(seed(), seedInvoiceIds.Aster, {
       type: 'route-am',
-      value: { note: 'Hand off unanswered reminders (simulation).' },
+      value: { note: 'Hand off quantity dispute (simulation).' },
     })
     expect(errors).toEqual({})
-    expect(byCode(invoices, 'East').ownerRole).toBe('account_manager')
+    expect(byCode(invoices, 'Aster').ownerRole).toBe('account_manager')
   })
 
   it('verifies Grove invoice accuracy', () => {

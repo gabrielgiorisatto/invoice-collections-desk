@@ -45,7 +45,7 @@ Who owns the next action: `operator` (finance operator) or `account_manager` (si
 _Avoid_: Assignee, owner (alone)
 
 **ActionKind**:
-The kind of operator action recorded on an **Invoice**: follow-up, dated promise, dispute update, route to account manager, verify accuracy, payment received (full or partial), or **Resolve**.
+The kind of operator action recorded on an **Invoice**: follow-up, dated promise, dispute update, route to account manager, verify accuracy, payment received (full or partial), or **Resolve**. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
 _Avoid_: Event, mutation, update
 
 ### Morning focus

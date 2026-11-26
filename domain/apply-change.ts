@@ -7,6 +7,7 @@ import {
   type InvoiceEvent,
   type ResolutionReason,
 } from './model.ts'
+import { availableActions } from './lifecycle.ts'
 import { inActiveQueue, remaining, validDate } from './rules.ts'
 
 const resolutionReasons: ResolutionReason[] = ['dispute_closed', 'credit_issued', 'other']
@@ -24,11 +25,11 @@ function recordEvent(invoice: Invoice, title: string, detail = ''): Invoice {
 export function applyChange(invoices: Invoice[], key: string, change: Change) {
   const invoice = invoices.find(item => invoiceKey(item) === key)
   if (!invoice) return { invoices, errors: { form: 'Invoice not found.' } }
-  if (!inActiveQueue(invoice) && change.type !== 'follow-up') {
-    // Allow reading history only; mutations on settled/resolved invoices rejected except we block all
-  }
-  if (!inActiveQueue(invoice)) {
+if (!inActiveQueue(invoice)) {
     return { invoices, errors: { form: 'Invoice is out of the active queue.' } }
+  }
+  if (!availableActions(invoice).includes(change.type)) {
+    return { invoices, errors: { form: 'This action is not available for the current invoice state.' } }
   }
 
   const errors: Record<string, string> = {}

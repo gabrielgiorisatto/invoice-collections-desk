@@ -15,14 +15,11 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
-  AlertOutlined,
   BookOutlined,
-  ClockCircleOutlined,
   DashboardOutlined,
-  ExclamationCircleOutlined,
-  FileSearchOutlined,
+  FileTextOutlined,
+  FlagOutlined,
   UnorderedListOutlined,
-  WarningOutlined,
 } from '@ant-design/icons'
 import {
   demoDay,
@@ -43,7 +40,7 @@ import { loadInvoices } from '../../api/invoices.ts'
 import { invoiceStatusLabel } from './status.ts'
 import { PriorityTag, StatusTag } from './tags.tsx'
 import ActionModal from './ActionModal.tsx'
-import { primaryAction, type ActionModal as ActionKind } from './primaryAction.ts'
+import { actionCatalog, availableActions, primaryActionKind, type ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
@@ -59,14 +56,6 @@ function money(amount: number) {
 }
 
 
-function pickIcon(invoice: Invoice) {
-  const promise = promiseStatus(invoice)
-  if (promise === 'broken') return { Icon: WarningOutlined, tone: 'warn' as const }
-  if (disputeStatus(invoice) === 'open') return { Icon: AlertOutlined, tone: 'danger' as const }
-  if (invoice.invoiceAccuracy === 'unverified_claim') return { Icon: FileSearchOutlined, tone: 'warn' as const }
-  if (promise === 'active') return { Icon: ClockCircleOutlined, tone: 'default' as const }
-  return { Icon: ExclamationCircleOutlined, tone: 'default' as const }
-}
 
 export default function DeskPage() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
@@ -123,10 +112,13 @@ export default function DeskPage() {
       title: 'Invoice',
       key: 'invoice',
       render: (_value, row) => (
-        <>
-          <div><Text strong>{row.code}</Text></div>
-          <Text type="secondary" style={{ fontSize: 12 }}>{row.customer}</Text>
-        </>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <FileTextOutlined style={{ marginTop: 4, color: '#6B7280' }} />
+          <div>
+            <div><Text strong>{row.code}</Text></div>
+            <Text type="secondary" style={{ fontSize: 12 }}>{row.customer}</Text>
+          </div>
+        </div>
       ),
     },
     {
@@ -227,14 +219,13 @@ export default function DeskPage() {
 
                   {nav === 'desk' ? (
                     <section className="section-block" aria-labelledby="next-up">
-                      <h2 id="next-up">Next up</h2>
+                      <h2 id="next-up"><FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />Next up</h2>
                       {picks.length === 0 ? (
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
                       ) : (
                         <div className="today-grid">
                           {picks.map(invoice => {
                             const { tier, reason } = explainPriority(invoice)
-                            const { Icon, tone } = pickIcon(invoice)
                             return (
                               <button
                                 key={invoice.id}
@@ -243,11 +234,9 @@ export default function DeskPage() {
                                 aria-current={selectedId === invoice.id}
                                 onClick={() => setSelectedId(invoice.id)}
                               >
-                                <span className={`today-icon${tone === 'default' ? '' : ` ${tone}`}`}>
-                                  <Icon />
-                                </span>
-                                <span style={{ minWidth: 0 }}>
+                                <span style={{ minWidth: 0, width: '100%' }}>
                                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <FileTextOutlined style={{ color: '#6B7280' }} />
                                     <span className="code">{invoice.code}</span>
                                     <PriorityTag tier={tier} />
                                   </div>
@@ -328,26 +317,34 @@ export default function DeskPage() {
                 },
               ]}
             />
-            {inActiveQueue(selected) ? (
-              <Space direction="vertical" style={{ width: '100%', marginTop: 16 }}>
-                {primaryAction(selected) ? (
-                  <Button type="primary" block onClick={() => setActionKind(primaryAction(selected)!.type)}>
-                    {primaryAction(selected)!.label}
-                  </Button>
-                ) : null}
-                <Space wrap>
-                  <Button onClick={() => setActionKind('follow-up')}>Follow-up</Button>
-                  <Button onClick={() => setActionKind('promise')}>Promise</Button>
-                  <Button onClick={() => setActionKind('payment')}>Payment</Button>
-                  <Button onClick={() => setActionKind('dispute')}>Dispute</Button>
-                  <Button onClick={() => setActionKind('route-am')}>Route to AM</Button>
-                  <Button onClick={() => setActionKind('verify-accuracy')}>Verify</Button>
-                  <Button danger onClick={() => setActionKind('resolve')}>Resolve</Button>
+            {(() => {
+              const actions = availableActions(selected)
+              const primary = primaryActionKind(selected)
+              if (!actions.length) {
+                return <Alert style={{ marginTop: 16 }} type="success" showIcon message="Out of active queue" />
+              }
+              return (
+                <Space direction="vertical" style={{ width: '100%', marginTop: 16 }} size={12}>
+                  {actions.map(kind => {
+                    const meta = actionCatalog[kind]
+                    const isPrimary = kind === primary
+                    return (
+                      <div key={kind}>
+                        <Button
+                          type={isPrimary ? 'primary' : 'default'}
+                          danger={kind === 'resolve' && !isPrimary}
+                          block
+                          onClick={() => setActionKind(kind)}
+                        >
+                          {meta.label}
+                        </Button>
+                        <div style={{ marginTop: 4, fontSize: 12, color: '#6B7280' }}>{meta.hint}</div>
+                      </div>
+                    )
+                  })}
                 </Space>
-              </Space>
-            ) : (
-              <Alert style={{ marginTop: 16 }} type="success" showIcon message="Out of active queue" />
-            )}
+              )
+            })()}
           </>
         ) : null}
       </Drawer>
