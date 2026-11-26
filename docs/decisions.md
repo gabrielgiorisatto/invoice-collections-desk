@@ -1,54 +1,38 @@
 # Decisions
 
-These are the calls that shape the desk. The ADRs under `docs/adr/` are the short records. This note is the reasoning a reviewer can read once.
+The README is the reviewer read. This note is the same calls, shorter. The ADRs under `docs/adr/` are the records.
 
-## Priority tiers, not a score
+## Next up
 
-The morning question is “which three invoices should a person touch,” not “who is 87 likely to pay.” A point model (age × amount × days since contact) looks precise and hides the judgment. It also reads as a prediction. We rejected it.
+Three slots. P0 first, in order: broken promise with no open dispute, never contacted with no open dispute, unverified details. Then P1. P2 and P3 never fill a slot. A broken promise with an open dispute is P1. It is not a cold chase.
 
-Tiers come from enums the operator can see: promise none / active / broken, dispute none / open / resolved, invoice details ok / unverified, and whether anyone has been contacted. First matching rule wins.
+A follow-up does not remove an invoice. Priority does, and only from Next up. Brook’s first contact drops “never contacted,” so Brook leaves P0 and becomes P1. On the seed, Aster takes the open slot. Brook stays in the queue until it is paid or resolved. A follow-up on Dune leaves the broken promise in place, so Dune stays first.
 
-P0 is the work that belongs in the three slots, in a fixed order: broken promise (Dune), then never contacted and not in dispute (Brook), then details the customer challenged and we have not checked (Grove). P1 is real but secondary: an open dispute (Aster), or two unanswered follow-ups with an account manager named (East). P1 fills a slot only when a P0 is gone. P2 is an active promise (Crest). P3 is nothing left to chase. Inside a tier, a larger remaining balance wins, then more days overdue.
+Inside a tier, a larger remaining balance wins, then more days overdue.
 
-The consequence is visible on the seed. Aster is $12,000 and 45 days late, and it is not in Next up. Brook is $1,800 and is. Age-sorted collections would have done the opposite. We would rather the operator call the untouched invoice than lean on a disputed one.
+## Tiers, not a score
 
-## Grove is something the operator does
+P0–P3 come from the enums on the invoice. The first matching rule wins. There is no point total and no pay-likelihood score. The desk labels them High, Med, Low, and Clear. See [ADR-0001](adr/0001-priority-tiers-not-points.md).
 
-“Details might be wrong” was easy to leave as a badge. That makes Grove a label instead of a task. The operator confirms the invoice, cancels the request, or turns the claim into a dispute.
+## Status and legal actions
 
-One open details request: **Flag details for review** when none is open; **Confirm details verified** or **Cancel details request** when one is open. No second flag. A follow-up is only a contact note. It must not clear Grove, and it must not set the flag either. Otherwise “I sent an email” and “I checked the remittance” become the same click. Confirm and cancel require a note, so an empty save cannot wipe the flag. After a real confirm or cancel, Grove is no longer P0.
+Status is a label, separate from the tier. First match: Paid, Resolved, Disputed, Broken, Promised, Partial, Needs check, Open. A partial does not, by itself, change the tier.
 
-## Cash is not activity
+On an active invoice the drawer always allows follow-up, one promise, one dispute, record payment, and resolve without payment. The others stay on screen, disabled, with the reason. The server enforces the same list.
 
-The buyer’s number has to separate money from motion. The proposed metric is the sum of payments the operator recorded, next to the count of follow-ups. It is proposed. The sample invoices are fiction, and nothing here is reconciled to a bank.
+| Invoice | Also legal |
+| --- | --- |
+| Brook, open | Flag details |
+| Dune, broken promise | Cancel the promise |
+| Crest, promise still ahead | Cancel the promise |
+| Grove, details unverified | Confirm or cancel the details request |
+| Aster, open dispute | Cancel the dispute, route to account manager |
+| Paid or resolved | None |
 
-That rule is why several actions are deliberately powerless over Paid total:
+A follow-up is a contact note. It does not set or clear the details flag. One details request, one promise, and one dispute: flag or create when none is open, then update or cancel. A dispute can be opened on a broken promise; the promise stays. See [ADR-0004](adr/0004-action-lifecycle.md).
 
-- A follow-up adds activity only.
-- A promise stores a date. Future dates wait. Past unpaid dates become broken. Neither is cash.
-- Resolve takes the invoice out of the queue with a reason (`dispute_closed`, `credit_issued`, `other`) and a note. It is how commercial cleanup leaves the morning list without pretending the money arrived.
-- Partial payments are in. Remaining is the face amount minus the payments on file. Recording $500 against Dune’s $3,500 raises Paid total by $500 and leaves Dune in the queue. Only a zero remaining, or a resolve, drops it.
+## Cash versus follow-ups
 
-Open remaining on the desk also skips open disputes. Aster’s balance is still in the table. It is not added to the “cash we could chase this morning” figure. That is a display decision, not a write-off.
+Cash collected is the sum of recorded payments, shown as Paid total. Follow-ups completed is the count of follow-up notes, including the seed. That pair is proposed. It is not measured recovery, and it is not a bank or ledger figure.
 
-## The lifecycle is a gate, not a hint
-
-Every button is always on the drawer, in one order, so the operator learns the set. The blue one is the preferred legal action for that state. The others are disabled with a sentence, not hidden.
-
-The same matrix runs in `applyChange` on the server. A disabled button is not the control. Follow-up is always a contact note on an active invoice. Details, promise, and dispute each allow one open item: flag or create when none is open; confirm/update or cancel when one is open. No second flag, and no second promise on top of the one already there. A dispute can be opened, updated, or cancelled even when the promise is broken; the broken promise stays on the invoice, and the open dispute is not a cold chase. Record payment and resolve without payment are always available and sit in one group. Paid and resolved invoices have no actions.
-
-Route to AM is its own action, not a follow-up. It is allowed for an open dispute and is labeled a simulation. It does not append a follow-up. East’s “AM available” line is why East is P1. It does not unlock Route to AM. East is still a follow-up until someone opens a dispute.
-
-## Table for the scan, drawer for the decision
-
-The queue is a glance: customer over invoice code, remaining, due date with the overdue count, and short tags. Row color is the tier (soft red, amber, blue, green) so High work is visible without reading every tag. Tags are solid and muted, not a second rainbow. A dash means “none,” not a gray pill that looks like a status.
-
-The drawer is where the amounts and the state are structured: paid of face amount, due date and overdue days, then promise / dispute / details as chips, then the action list and the activity timeline. The timeline stays because a follow-up that is not cash still has to be visible after refresh. Sorting and the Status / Promise / Priority filters live on the table, outside the cells, so filtering is not an Excel-style per-column widget and does not fight the row tint.
-
-## One cookie, one file
-
-There is no real account system. The sign-in screen is a labeled simulation and only issues this cookie. The browser holds an HTTP-only cookie. SQLite holds the invoice JSON for that id. Refresh is a read of the same row. Two tabs compare a revision and the loser gets a conflict instead of a silent overwrite.
-
-A reviewer can trust a change when the domain tests still describe these rules, the HTTP tests still read and write this SQLite session, and lint and CI are green. Branch protection on main has to require those checks; the workflow file alone does not stop a merge.
-
-On Render, that file is worth keeping only if it sits on a disk. Free instances have no disk, so the file dies with the container and the next request for that cookie reseeds. The blueprint therefore uses a Starter instance and mounts `/var/data`. That is a deploy choice, not a claim that a hosted URL already exists.
+A partial payment counts for the amount entered and leaves the invoice in the queue. Resolve leaves the queue with a reason and a note. Resolve is not paid. See [ADR-0002](adr/0002-resolve-is-not-paid.md) and [ADR-0003](adr/0003-proposed-recovery-metric.md).
