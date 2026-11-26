@@ -1,6 +1,6 @@
 # Agent instructions
 
-This repo is configured for Matt Pocock engineering skills (Cursor). **Do not** start `/to-spec`, `/to-tickets`, `/implement`, or `/tdd` for the desk until Gabriel explicitly says go.
+This repo is configured for Matt Pocock engineering skills (Cursor). Spec: GitHub issue [#1](https://github.com/gabrielgiorisatto/invoice-collections-desk/issues/1). **Do not** `/implement` or `/tdd` until Gabriel approves the ticket breakdown and says to implement.
 
 ## Settled (grill nearly closed)
 
@@ -30,3 +30,4 @@ GitHub Issues on `gabrielgiorisatto/invoice-collections-desk` via `gh`. See `doc
 ### Domain docs
 
 Single-context: root [`GLOSSARY.md`](GLOSSARY.md) + [`docs/adr/`](docs/adr/). See `docs/agents/domain.md`. Use glossary terms; flag ADR conflicts explicitly.
+
