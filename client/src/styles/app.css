@@ -62,8 +62,23 @@ body {
   letter-spacing: -0.03em;
 }
 .filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
   margin-bottom: 16px;
   overflow-x: auto;
+}
+.filter-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+.today-card:focus-visible,
+.queue-panel .ant-table-tbody > tr:focus-visible > td {
+  outline: 2px solid #2563EB;
+  outline-offset: -2px;
 }
 
 .kpi-row {

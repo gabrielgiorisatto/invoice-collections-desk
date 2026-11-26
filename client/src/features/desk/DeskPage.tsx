@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
 import {
   Alert,
   App,
+  Button,
   Descriptions,
   Drawer,
   Empty,
@@ -24,6 +25,8 @@ import {
   activityTimeline,
   dateFilterLabels,
   demoDay,
+  deskEmptyCopy,
+  deskQueueView,
   disputeStatus,
   explainPriority,
   filterByDueWindow,
@@ -196,17 +199,23 @@ export default function DeskPage() {
     () => (invoices ? filterByDueWindow(invoices, dateFilter) : []),
     [invoices, dateFilter],
   )
+  const queueView = useMemo(
+    () => (invoices ? deskQueueView(invoices, filtered, dateFilter) : null),
+    [invoices, filtered, dateFilter],
+  )
   const picks = useMemo(() => todaysThree(filtered), [filtered])
   const queue = useMemo(() => {
-    return [...filtered].sort(
+    const active = queueView?.kind === 'ready' ? queueView.active : []
+    return [...active].sort(
       (a, b) =>
         tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
         || remaining(b) - remaining(a)
         || overdueDays(b) - overdueDays(a),
     )
-  }, [filtered])
+  }, [queueView])
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
+  const emptyCopy = queueView && queueView.kind !== 'ready' ? deskEmptyCopy(queueView) : null
 
   const kpis = useMemo(() => {
     return {
@@ -341,7 +350,12 @@ export default function DeskPage() {
               ) : (
                 <>
                   <div className="filter-row">
+                    <label className="filter-label" id="due-window-label" htmlFor="due-window-filter">
+                      Due window
+                    </label>
                     <Segmented
+                      id="due-window-filter"
+                      aria-labelledby="due-window-label"
                       value={dateFilter}
                       onChange={value => setDateFilter(value as DateFilterPreset)}
                       options={[
@@ -374,11 +388,20 @@ export default function DeskPage() {
 
                   <section className="section-block" aria-labelledby="next-up">
                     <Title level={4} id="next-up" style={{ marginTop: 0 }}>
-                      <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />
+                      <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} aria-hidden />
                       Next up
                     </Title>
                     {picks.length === 0 ? (
-                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description={
+                          queueView?.kind === 'all-cleared'
+                            ? 'No morning follow-ups — queue cleared'
+                            : queueView?.kind === 'filter-no-match'
+                              ? 'No morning follow-ups in this due window'
+                              : 'No morning follow-ups'
+                        }
+                      />
                     ) : (
                       <div className="today-grid">
                         {picks.map(invoice => {
@@ -388,6 +411,7 @@ export default function DeskPage() {
                               key={invoice.id}
                               type="button"
                               className="today-card"
+                              aria-label={`Open ${invoice.code}, ${invoice.customer}`}
                               onClick={() => setDrawerId(invoice.id)}
                             >
                               <span style={{ minWidth: 0, width: '100%' }}>
@@ -425,10 +449,41 @@ export default function DeskPage() {
                       scroll={{ x: 1000 }}
                       rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
+                        tabIndex: 0,
+                        role: 'button',
+                        'aria-label': `Open invoice ${record.code}`,
                         onClick: () => setDrawerId(record.id),
+                        onKeyDown: (event: KeyboardEvent) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setDrawerId(record.id)
+                          }
+                        },
                         style: { cursor: 'pointer' },
                       })}
-                      locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Queue empty" /> }}
+                      locale={{
+                        emptyText: emptyCopy ? (
+                          <Empty
+                            image={Empty.PRESENTED_IMAGE_SIMPLE}
+                            description={
+                              <Space direction="vertical" size={8}>
+                                <Text strong>{emptyCopy.title}</Text>
+                                <Text type="secondary">{emptyCopy.description}</Text>
+                                {emptyCopy.actionLabel ? (
+                                  <Button
+                                    type="link"
+                                    onClick={() => setDateFilter('all-time')}
+                                  >
+                                    {emptyCopy.actionLabel}
+                                  </Button>
+                                ) : null}
+                              </Space>
+                            }
+                          />
+                        ) : (
+                          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Queue empty" />
+                        ),
+                      }}
                     />
                   </section>
                 </>
@@ -464,7 +519,12 @@ export default function DeskPage() {
           onClose={() => setActionTarget(null)}
           onSaved={items => {
             applyDeskUpdate(items)
-            message.success('Saved')
+            const nextView = deskQueueView(items, filterByDueWindow(items, dateFilter), dateFilter)
+            message.success(
+              nextView.kind === 'all-cleared'
+                ? 'Saved — queue cleared'
+                : 'Saved',
+            )
           }}
         />
       ) : null}

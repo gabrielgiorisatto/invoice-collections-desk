@@ -28,12 +28,15 @@ function ActionButton({
   const disabledReason = actionDisabledReason(invoice, kind)
   const disabled = Boolean(disabledReason)
   const primary = !disabled && primaryActionKind(invoice) === kind
+  const describedBy = disabledReason ? `${kind}-disabled-reason` : `${kind}-hint`
   const button = (
     <Button
       type={primary ? 'primary' : 'default'}
       danger={kind === 'resolve' && !primary}
       disabled={disabled}
       block
+      aria-label={meta.label}
+      aria-describedby={describedBy}
       onClick={() => onAction(kind)}
     >
       {meta.label}
@@ -48,7 +51,12 @@ function ActionButton({
       ) : (
         button
       )}
-      <div className="action-hint">{meta.hint}</div>
+      <div
+        id={disabledReason ? `${kind}-disabled-reason` : `${kind}-hint`}
+        className="action-hint"
+      >
+        {disabledReason ?? meta.hint}
+      </div>
     </div>
   )
 }
@@ -79,8 +87,13 @@ export function InvoiceRowMenu({ invoice, onAction }: Props) {
 
   return (
     <Dropdown menu={{ items }} trigger={['click']}>
-      <Button size="small" onClick={event => event.stopPropagation()}>
-        Actions <DownOutlined />
+      <Button
+        size="small"
+        aria-label={`Actions for ${invoice.code}`}
+        onClick={event => event.stopPropagation()}
+        onKeyDown={event => event.stopPropagation()}
+      >
+        Actions <DownOutlined aria-hidden />
       </Button>
     </Dropdown>
   )
