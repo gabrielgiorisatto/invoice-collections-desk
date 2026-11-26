@@ -1,4 +1,4 @@
-import { applyChange, seed, type Change, type Invoice } from '../../domain/index.ts'
+import { applyChange, seed, type Change, type Invoice, type ResolutionReason } from '../../domain/index.ts'
 import type { Database } from './database.ts'
 
 function readInvoices(payload?: string): Invoice[] {
@@ -6,46 +6,87 @@ function readInvoices(payload?: string): Invoice[] {
   return JSON.parse(payload) as Invoice[]
 }
 
-function parseChange(input: unknown): Change | undefined {
+function asString(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return undefined
+}
+
+function asAmount(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (value === 'true' || value === 1 || value === '1') return true
+  if (value === 'false' || value === 0 || value === '0') return false
+  return undefined
+}
+
+/**
+ * Parse a UI/API PATCH body into a domain Change.
+ * Known action kinds coerce soft field shapes (missing note → "", amount strings, etc.)
+ * so lifecycle-allowed actions do not 400 as "Invalid update." — domain returns 422 for empty/invalid fields.
+ */
+export function parseChange(input: unknown): Change | undefined {
   if (!input || typeof input !== 'object' || !('type' in input)) return
   const body = input as Record<string, unknown>
-  const value = body.value as Record<string, unknown> | undefined
+  const value = (body.value && typeof body.value === 'object'
+    ? body.value
+    : {}) as Record<string, unknown>
+
   switch (body.type) {
-    case 'follow-up':
-      if (value && typeof value.note === 'string' && typeof value.channel === 'string' && typeof value.answered === 'boolean') {
-        return { type: 'follow-up', value: { note: value.note, channel: value.channel, answered: value.answered } }
+    case 'follow-up': {
+      const note = asString(value.note) ?? ''
+      const channel = asString(value.channel) ?? 'Email'
+      const answered = asBoolean(value.answered) ?? false
+      return { type: 'follow-up', value: { note, channel, answered } }
+    }
+    case 'promise': {
+      const dueDate = asString(value.dueDate)
+      if (dueDate === undefined) return
+      return { type: 'promise', value: { dueDate, note: asString(value.note) ?? '' } }
+    }
+    case 'payment': {
+      const amount = asAmount(value.amount)
+      if (amount === undefined) return
+      return { type: 'payment', value: { amount, note: asString(value.note) ?? '' } }
+    }
+    case 'resolve': {
+      const reason = asString(value.reason)
+      if (!reason || !['dispute_closed', 'credit_issued', 'other'].includes(reason)) return
+      return {
+        type: 'resolve',
+        value: { reason: reason as ResolutionReason, note: asString(value.note) ?? '' },
       }
-      break
-    case 'promise':
-      if (value && typeof value.dueDate === 'string' && typeof value.note === 'string') {
-        return { type: 'promise', value: { dueDate: value.dueDate, note: value.note } }
+    }
+    case 'dispute': {
+      const reason = asString(value.reason)
+      const status = asString(value.status)
+      if (reason === undefined) return
+      if (status !== 'open' && status !== 'resolved') return
+      return {
+        type: 'dispute',
+        value: {
+          reason,
+          evidence: asString(value.evidence) ?? '',
+          status,
+        },
       }
-      break
-    case 'payment':
-      if (value && typeof value.amount === 'number' && typeof value.note === 'string') {
-        return { type: 'payment', value: { amount: value.amount, note: value.note } }
-      }
-      break
-    case 'resolve':
-      if (value && typeof value.reason === 'string' && typeof value.note === 'string'
-        && ['dispute_closed', 'credit_issued', 'other'].includes(value.reason)) {
-        return { type: 'resolve', value: { reason: value.reason as 'dispute_closed' | 'credit_issued' | 'other', note: value.note } }
-      }
-      break
-    case 'dispute':
-      if (value && typeof value.reason === 'string' && typeof value.evidence === 'string' && (value.status === 'open' || value.status === 'resolved')) {
-        return { type: 'dispute', value: { reason: value.reason, evidence: value.evidence, status: value.status } }
-      }
-      break
+    }
     case 'route-am':
-      if (value && typeof value.note === 'string') return { type: 'route-am', value: { note: value.note } }
-      break
+      return { type: 'route-am', value: { note: asString(value.note) ?? '' } }
     case 'flag-details':
-      if (value && typeof value.note === 'string') return { type: 'flag-details', value: { note: value.note } }
-      break
+      return { type: 'flag-details', value: { note: asString(value.note) ?? '' } }
     case 'confirm-details':
-      if (value && typeof value.note === 'string') return { type: 'confirm-details', value: { note: value.note } }
-      break
+      return { type: 'confirm-details', value: { note: asString(value.note) ?? '' } }
+    default:
+      return
   }
 }
 

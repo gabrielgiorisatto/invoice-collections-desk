@@ -13,6 +13,10 @@ type Props = {
   onSaved: (invoices: Invoice[]) => void
 }
 
+function noteValue(value: unknown): string {
+  return typeof value === 'string' ? value : value == null ? '' : String(value)
+}
+
 export default function ActionModal({ invoice, kind, open, onClose, onSaved }: Props) {
   const [form] = Form.useForm()
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -25,7 +29,7 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
     form.resetFields()
     if (kind === 'follow-up') form.setFieldsValue({ channel: 'Email', answered: false })
     if (kind === 'payment') form.setFieldsValue({ amount: remaining(invoice) })
-    if (kind === 'dispute') form.setFieldsValue({ status: 'open' })
+    if (kind === 'dispute') form.setFieldsValue({ status: 'open', evidence: '' })
     if (kind === 'resolve') form.setFieldsValue({ reason: 'dispute_closed' })
   }, [open, kind, invoice, form])
 
@@ -35,28 +39,51 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
     let change: Change
     switch (kind) {
       case 'follow-up':
-        change = { type: 'follow-up', value: { note: values.note, channel: values.channel, answered: Boolean(values.answered) } }
+        change = {
+          type: 'follow-up',
+          value: {
+            note: noteValue(values.note),
+            channel: noteValue(values.channel) || 'Email',
+            answered: Boolean(values.answered),
+          },
+        }
         break
       case 'flag-details':
-        change = { type: 'flag-details', value: { note: values.note } }
+        change = { type: 'flag-details', value: { note: noteValue(values.note) } }
         break
       case 'confirm-details':
-        change = { type: 'confirm-details', value: { note: values.note } }
+        change = { type: 'confirm-details', value: { note: noteValue(values.note) } }
         break
       case 'promise':
-        change = { type: 'promise', value: { dueDate: values.dueDate, note: values.note } }
+        change = {
+          type: 'promise',
+          value: { dueDate: noteValue(values.dueDate), note: noteValue(values.note) },
+        }
         break
       case 'payment':
-        change = { type: 'payment', value: { amount: Number(values.amount), note: values.note } }
+        change = {
+          type: 'payment',
+          value: { amount: Number(values.amount), note: noteValue(values.note) },
+        }
         break
       case 'resolve':
-        change = { type: 'resolve', value: { reason: values.reason as ResolutionReason, note: values.note } }
+        change = {
+          type: 'resolve',
+          value: { reason: values.reason as ResolutionReason, note: noteValue(values.note) },
+        }
         break
       case 'dispute':
-        change = { type: 'dispute', value: { reason: values.reason, evidence: values.evidence ?? '', status: values.status } }
+        change = {
+          type: 'dispute',
+          value: {
+            reason: noteValue(values.reason),
+            evidence: noteValue(values.evidence),
+            status: values.status,
+          },
+        }
         break
       case 'route-am':
-        change = { type: 'route-am', value: { note: values.note } }
+        change = { type: 'route-am', value: { note: noteValue(values.note) } }
         break
       default: {
         const _exhaustive: never = kind

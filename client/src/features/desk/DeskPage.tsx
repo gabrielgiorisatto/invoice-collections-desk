@@ -18,9 +18,7 @@ import type { ColumnsType } from 'antd/es/table'
 import {
   BookOutlined,
   DashboardOutlined,
-  FileTextOutlined,
   FlagOutlined,
-  UnorderedListOutlined,
 } from '@ant-design/icons'
 import {
   activityTimeline,
@@ -58,7 +56,7 @@ import {
   glancePriority,
   glancePromise,
   glanceStatus,
-  isP0Row,
+  priorityRowClass,
 } from './tableGlance.ts'
 import type { ActionKind } from './primaryAction.ts'
 
@@ -77,6 +75,15 @@ function money(amount: number) {
 
 function paidAmount(invoice: Invoice) {
   return invoice.amount - remaining(invoice)
+}
+
+function InvoiceIdentity({ code, customer }: { code: string; customer: string }) {
+  return (
+    <div className="invoice-identity">
+      <span className="invoice-code">{code}</span>
+      <span className="invoice-customer">{customer}</span>
+    </div>
+  )
 }
 
 function ActivitySection({ invoice }: { invoice: Invoice }) {
@@ -214,68 +221,64 @@ export default function DeskPage() {
     setActionTarget({ id: invoiceId, kind })
   }
 
+  function applyDeskUpdate(next: Invoice[]) {
+    // Replace session snapshot so Next up + queue re-sort by priority tiers.
+    setInvoices(next)
+  }
+
   const columns: ColumnsType<Invoice> = [
     {
       title: 'Invoice',
       key: 'invoice',
-      render: (_value, row) => (
-        <Space align="start" size={8}>
-          <FileTextOutlined style={{ marginTop: 4, color: 'rgba(0,0,0,0.45)' }} />
-          <span>
-            <Text strong>{row.code}</Text>
-            <br />
-            <Text type="secondary">{row.customer}</Text>
-          </span>
-        </Space>
-      ),
+      render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
     },
     {
       title: 'Remaining',
       key: 'remaining',
       align: 'right',
-      width: 110,
+      width: 100,
       render: (_value, row) => <Text>{money(remaining(row))}</Text>,
     },
     {
       title: 'Due',
       key: 'due',
-      width: 160,
+      width: 150,
       render: (_value, row) => <Text>{formatDueDate(row)}</Text>,
     },
     {
       title: 'Priority',
       key: 'priority',
-      width: 72,
+      width: 64,
       render: (_value, row) => <Text>{glancePriority(priorityTier(row))}</Text>,
     },
     {
       title: 'Status',
       key: 'status',
-      width: 110,
+      width: 100,
       render: (_value, row) => <Text>{glanceStatus(row)}</Text>,
     },
     {
       title: 'Promise',
       key: 'promise',
-      width: 80,
+      width: 72,
       render: (_value, row) => <Text>{glancePromise(row)}</Text>,
     },
     {
       title: 'Dispute',
       key: 'dispute',
-      width: 80,
+      width: 72,
       render: (_value, row) => <Text>{glanceDispute(row)}</Text>,
     },
     {
       title: 'Details',
       key: 'details',
-      width: 100,
+      width: 92,
       render: (_value, row) => <Text>{glanceDetails(row)}</Text>,
     },
     {
       title: '',
       key: 'actions',
-      width: 120,
+      width: 108,
       fixed: 'right',
       render: (_value, row) => (
         <InvoiceRowMenu
@@ -286,7 +289,7 @@ export default function DeskPage() {
     },
   ]
 
-  const pageTitle = nav === 'guide' ? 'Guide' : nav === 'queue' ? 'Queue' : 'Desk'
+  const pageTitle = nav === 'guide' ? 'Guide' : 'Desk'
 
   return (
     <Layout style={{ minHeight: '100%' }}>
@@ -302,7 +305,6 @@ export default function DeskPage() {
           style={{ borderInlineEnd: 0, padding: '12px 8px' }}
           items={[
             { key: 'desk', icon: <DashboardOutlined />, label: 'Desk' },
-            { key: 'queue', icon: <UnorderedListOutlined />, label: 'Queue' },
             { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
           ]}
         />
@@ -370,58 +372,58 @@ export default function DeskPage() {
                     </div>
                   </div>
 
-                  {nav === 'desk' ? (
-                    <section className="section-block" aria-labelledby="next-up">
-                      <Title level={4} id="next-up" style={{ marginTop: 0 }}>
-                        <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />
-                        Next up
-                      </Title>
-                      {picks.length === 0 ? (
-                        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
-                      ) : (
-                        <div className="today-grid">
-                          {picks.map(invoice => {
-                            const { tier, reason } = explainPriority(invoice)
-                            return (
-                              <button
-                                key={invoice.id}
-                                type="button"
-                                className="today-card"
-                                onClick={() => setDrawerId(invoice.id)}
-                              >
-                                <span style={{ minWidth: 0, width: '100%' }}>
-                                  <Space size={8} wrap>
-                                    <FileTextOutlined style={{ color: 'rgba(0,0,0,0.45)' }} />
-                                    <Text strong>{invoice.code}</Text>
-                                    <Text type="secondary">{glancePriority(tier)}</Text>
-                                  </Space>
-                                  <div>
-                                    <Text>{money(remaining(invoice))} remaining</Text>
-                                  </div>
-                                  <Text type="secondary">{reason}</Text>
-                                </span>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </section>
-                  ) : null}
+                  <section className="section-block" aria-labelledby="next-up">
+                    <Title level={4} id="next-up" style={{ marginTop: 0 }}>
+                      <FlagOutlined style={{ marginRight: 8, color: '#2563EB' }} />
+                      Next up
+                    </Title>
+                    {picks.length === 0 ? (
+                      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No morning follow-ups" />
+                    ) : (
+                      <div className="today-grid">
+                        {picks.map(invoice => {
+                          const { tier, reason } = explainPriority(invoice)
+                          return (
+                            <button
+                              key={invoice.id}
+                              type="button"
+                              className="today-card"
+                              onClick={() => setDrawerId(invoice.id)}
+                            >
+                              <span style={{ minWidth: 0, width: '100%' }}>
+                                <Space size={8} wrap>
+                                  <Text strong className="invoice-code">{invoice.code}</Text>
+                                  <Text type="secondary">{glancePriority(tier)}</Text>
+                                </Space>
+                                <div className="invoice-customer" style={{ marginTop: 2 }}>
+                                  {invoice.customer}
+                                </div>
+                                <div>
+                                  <Text>{money(remaining(invoice))} remaining</Text>
+                                </div>
+                                <Text type="secondary">{reason}</Text>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
 
                   <section className="queue-panel" aria-labelledby="queue-heading">
                     <div className="head">
                       <Title level={4} id="queue-heading" style={{ margin: 0 }}>
-                        {nav === 'queue' ? 'All invoices' : 'Queue'}
+                        Queue
                       </Title>
                     </div>
                     <Table
                       rowKey="id"
-                      size="middle"
+                      size="small"
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1100 }}
-                      rowClassName={record => (isP0Row(record) ? 'row-p0' : '')}
+                      scroll={{ x: 1000 }}
+                      rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
                         onClick: () => setDrawerId(record.id),
                         style: { cursor: 'pointer' },
@@ -461,7 +463,7 @@ export default function DeskPage() {
           open
           onClose={() => setActionTarget(null)}
           onSaved={items => {
-            setInvoices(items)
+            applyDeskUpdate(items)
             message.success('Saved')
           }}
         />

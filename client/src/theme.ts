@@ -16,7 +16,7 @@ export const deskTheme: ThemeConfig = {
     colorBgElevated: '#FFFFFF',
     colorFillAlter: '#F9FAFB',
     borderRadius: 8,
-    fontFamily: '"Inter", "Segoe UI", sans-serif',
+    fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", sans-serif',
     fontSize: 14,
     controlHeight: 36,
   },
@@ -39,6 +39,8 @@ export const deskTheme: ThemeConfig = {
       headerBg: '#F9FAFB',
       rowHoverBg: '#F3F4F6',
       borderColor: '#E5E7EB',
+      cellPaddingBlockSM: 8,
+      cellPaddingInlineSM: 12,
     },
     Card: {
       paddingLG: 20,
