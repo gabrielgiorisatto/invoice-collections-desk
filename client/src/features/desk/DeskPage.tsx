@@ -7,6 +7,7 @@ import {
   Empty,
   Layout,
   Menu,
+  Segmented,
   Space,
   Spin,
   Table,
@@ -23,19 +24,22 @@ import {
 } from '@ant-design/icons'
 import {
   activityTimeline,
+  dateFilterLabels,
   demoDay,
   disputeStatus,
   explainPriority,
+  filterByDueWindow,
   formatDueDate,
-  inActiveQueue,
   morningCapacity,
+  openRemainingTotal,
   overdueDays,
+  paidTotal,
   priorityTier,
   promiseStatus,
   remaining,
   todaysThree,
   totalFollowUps,
-  totalPayments,
+  type DateFilterPreset,
   type Invoice,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
@@ -169,6 +173,7 @@ export default function DeskPage() {
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nav, setNav] = useState('desk')
+  const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
   const { message } = App.useApp()
 
@@ -187,33 +192,30 @@ export default function DeskPage() {
     }
   }, [])
 
-  const picks = useMemo(() => (invoices ? todaysThree(invoices) : []), [invoices])
+  const filtered = useMemo(
+    () => (invoices ? filterByDueWindow(invoices, dateFilter) : []),
+    [invoices, dateFilter],
+  )
+  const picks = useMemo(() => todaysThree(filtered), [filtered])
   const queue = useMemo(() => {
-    if (!invoices) return []
-    return [...invoices].sort(
+    return [...filtered].sort(
       (a, b) =>
         tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
         || remaining(b) - remaining(a)
         || overdueDays(b) - overdueDays(a),
     )
-  }, [invoices])
+  }, [filtered])
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
 
   const kpis = useMemo(() => {
-    if (!invoices) {
-      return { openRemaining: 0, todayCount: 0, broken: 0, disputed: 0 }
-    }
-    const active = invoices.filter(inActiveQueue)
     return {
-      openRemaining: active
-        .filter(item => disputeStatus(item) !== 'open')
-        .reduce((sum, item) => sum + remaining(item), 0),
-      todayCount: todaysThree(invoices).length,
-      broken: active.filter(item => promiseStatus(item) === 'broken').length,
-      disputed: active.filter(item => disputeStatus(item) === 'open').length,
+      openRemaining: openRemainingTotal(filtered),
+      paid: paidTotal(filtered),
+      broken: filtered.filter(item => promiseStatus(item) === 'broken').length,
+      disputed: filtered.filter(item => disputeStatus(item) === 'open').length,
     }
-  }, [invoices])
+  }, [filtered])
 
   function openAction(invoiceId: string, kind: ActionKind) {
     setActionTarget({ id: invoiceId, kind })
@@ -344,7 +346,7 @@ export default function DeskPage() {
               <div className="desk-title-row">
                 <Title level={2} style={{ margin: 0 }}>{pageTitle}</Title>
                 <Text type="secondary">
-                  Payments {money(totalPayments(invoices))} · Follow-ups {totalFollowUps(invoices)} · {morningCapacity} slots
+                  Follow-ups {totalFollowUps(filtered)} · {morningCapacity} slots · Due window vs {demoDay}
                 </Text>
               </div>
 
@@ -357,14 +359,27 @@ export default function DeskPage() {
                 />
               ) : (
                 <>
+                  <div className="filter-row">
+                    <Segmented
+                      value={dateFilter}
+                      onChange={value => setDateFilter(value as DateFilterPreset)}
+                      options={[
+                        { label: dateFilterLabels['last-day'], value: 'last-day' },
+                        { label: dateFilterLabels['last-7-days'], value: 'last-7-days' },
+                        { label: dateFilterLabels['this-month'], value: 'this-month' },
+                        { label: dateFilterLabels['this-year'], value: 'this-year' },
+                        { label: dateFilterLabels['all-time'], value: 'all-time' },
+                      ]}
+                    />
+                  </div>
                   <div className="kpi-row">
                     <div className="kpi-card">
                       <Text type="secondary" className="kpi-label">Open remaining</Text>
                       <div className="value accent">{money(kpis.openRemaining)}</div>
                     </div>
                     <div className="kpi-card">
-                      <Text type="secondary" className="kpi-label">Next up</Text>
-                      <div className="value">{kpis.todayCount}</div>
+                      <Text type="secondary" className="kpi-label">Paid total</Text>
+                      <div className="value">{money(kpis.paid)}</div>
                     </div>
                     <div className="kpi-card">
                       <Text type="secondary" className="kpi-label">Broken promises</Text>

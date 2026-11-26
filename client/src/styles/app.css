@@ -50,6 +50,11 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   gap: 12px;
   margin-bottom: 20px;
 }
+.filter-row {
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
