@@ -114,18 +114,6 @@ body { margin: 0; background: #F9FAFB; color: #111827; }
   border-color: #2563EB;
   background: #EFF6FF;
 }
-.today-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #EFF6FF;
-  color: #2563EB;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-}
-.today-icon.warn { background: #FFFBEB; color: #D97706; }
-.today-icon.danger { background: #FEF2F2; color: #DC2626; }
 .today-card .code { font-weight: 700; color: #111827; }
 .today-card .amt { margin-top: 2px; font-size: 13px; color: #374151; font-weight: 600; }
 .today-card .why { margin-top: 6px; font-size: 12px; color: #6B7280; line-height: 1.35; }
