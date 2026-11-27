@@ -75,6 +75,8 @@ import {
   primaryStatusLine,
   promiseStateValue,
 } from './labels.ts'
+import type { ActionKind } from './primaryAction.ts'
+import { PriorityTag, StatusTag, TableTag } from './queueMarks.tsx'
 import {
   glanceDetails,
   glanceDetailsTone,
@@ -85,11 +87,9 @@ import {
   glancePromiseTone,
   glanceStatus,
   glanceStatusTone,
-  priorityRowClass,
   priorityToneClass,
   type GlanceTone,
 } from './tableGlance.ts'
-import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
@@ -113,11 +113,6 @@ function InvoiceIdentity({ code, customer }: { code: string; customer: string })
       <span className="invoice-code-muted">{code}</span>
     </div>
   )
-}
-
-function GlancePill({ label, tone }: { label: string; tone: GlanceTone }) {
-  if (label === '—') return <span className="cell-dash">—</span>
-  return <span className={`pill tone-${tone}`}>{label}</span>
 }
 
 function PriorityPill({ tier }: { tier: PriorityTier }) {
@@ -393,37 +388,37 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
     {
       title: 'Priority',
       key: 'priority',
-      width: 96,
+      width: 118,
       sorter: (a, b) => compareQueueColumn(a, b, 'priority'),
-      render: (_value, row) => <PriorityPill tier={priorityTier(row)} />,
+      render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
       width: 110,
       sorter: (a, b) => compareQueueColumn(a, b, 'status'),
-      render: (_value, row) => <GlancePill label={glanceStatus(row)} tone={glanceStatusTone(row)} />,
+      render: (_value, row) => <StatusTag label={glanceStatus(row)} tone={glanceStatusTone(row)} />,
     },
     {
       title: 'Promise',
       key: 'promise',
       width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'promise'),
-      render: (_value, row) => <GlancePill label={glancePromise(row)} tone={glancePromiseTone(row)} />,
+      render: (_value, row) => <TableTag label={glancePromise(row)} tone={glancePromiseTone(row)} />,
     },
     {
       title: 'Dispute',
       key: 'dispute',
       width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'dispute'),
-      render: (_value, row) => <GlancePill label={glanceDispute(row)} tone={glanceDisputeTone(row)} />,
+      render: (_value, row) => <TableTag label={glanceDispute(row)} tone={glanceDisputeTone(row)} />,
     },
     {
       title: 'Details',
       key: 'details',
       width: 120,
       sorter: (a, b) => compareQueueColumn(a, b, 'details'),
-      render: (_value, row) => <GlancePill label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
+      render: (_value, row) => <TableTag label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
     },
   ]
 
@@ -680,9 +675,8 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 972 }}
+                      scroll={{ x: 994 }}
                       showSorterTooltip={{ target: 'sorter-icon' }}
-                      rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
                         tabIndex: 0,
                         role: 'button',

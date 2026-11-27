@@ -1,3 +1,7 @@
+import type { PriorityTier } from '@domain/index.ts'
+import { PriorityTag, StatusTag } from './queueMarks.tsx'
+import type { GlanceTone } from './tableGlance.ts'
+
 const dashboard = [
   { term: 'Open remaining', detail: 'Cash still to collect. Open disputes stay out of this total.' },
   { term: 'Paid total', detail: 'Cash from Record payment. Resolve without payment leaves it unchanged.' },
@@ -13,7 +17,7 @@ const nextUp = [
   'A card leaves when priority changes, the invoice leaves the queue, or the due window hides it.',
 ] as const
 
-const statuses = [
+const statuses: { label: string; tone: GlanceTone; detail: string }[] = [
   { label: 'Open', tone: 'wait', detail: 'In the queue.' },
   { label: 'Promised', tone: 'wait', detail: 'Promise date is still ahead.' },
   { label: 'Broken', tone: 'attention', detail: 'Promise date has passed.' },
@@ -22,14 +26,14 @@ const statuses = [
   { label: 'Partial', tone: 'wait', detail: 'Some cash recorded. Still in the queue.' },
   { label: 'Paid', tone: 'ok', detail: 'Remaining is zero. Turn on Show paid.' },
   { label: 'Resolved', tone: 'neutral', detail: 'Closed with Resolve without payment. Turn on Show paid.' },
-] as const
+]
 
-const priorities = [
-  { label: 'High', tone: 'prio-p0', detail: 'Broken promise, no contact yet, or Needs check.' },
-  { label: 'Med', tone: 'prio-p1', detail: 'Open dispute, or follow-ups with no answer.' },
-  { label: 'Low', tone: 'prio-p2', detail: 'Active promise. Wait.' },
-  { label: 'Clear', tone: 'prio-p3', detail: 'Paid or resolved.' },
-] as const
+const priorities: { tier: PriorityTier; detail: string }[] = [
+  { tier: 'P0', detail: 'Broken promise, no contact yet, or Needs check.' },
+  { tier: 'P1', detail: 'Open dispute, or follow-ups with no answer.' },
+  { tier: 'P2', detail: 'Active promise. Wait.' },
+  { tier: 'P3', detail: 'Paid or resolved.' },
+]
 
 const columns = [
   { term: 'Customer / Invoice', detail: 'Customer and code. Click the row to open it.' },
@@ -124,7 +128,7 @@ export default function GuidePage() {
         <ul className="brief-legend">
           {statuses.map(item => (
             <li key={item.label}>
-              <span className={`pill tone-${item.tone}`}>{item.label}</span>
+              <StatusTag label={item.label} tone={item.tone} />
               <span>{item.detail}</span>
             </li>
           ))}
@@ -135,8 +139,8 @@ export default function GuidePage() {
         <h2 id="brief-priority">Priority</h2>
         <ul className="brief-legend">
           {priorities.map(item => (
-            <li key={item.label}>
-              <span className={`pill ${item.tone}`}>{item.label}</span>
+            <li key={item.tier}>
+              <PriorityTag tier={item.tier} />
               <span>{item.detail}</span>
             </li>
           ))}

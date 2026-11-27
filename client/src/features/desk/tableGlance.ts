@@ -1,6 +1,5 @@
 import {
   disputeStatus,
-  priorityTier,
   promiseStatus,
   type Invoice,
   type PriorityTier,
@@ -166,21 +165,3 @@ export function priorityToneClass(tier: PriorityTier): string {
   }
 }
 
-/** Soft table row tint class by priority tier (P0–P3). */
-export function priorityRowClass(invoice: Invoice): string {
-  const tier = priorityTier(invoice)
-  switch (tier) {
-    case 'P0':
-      return 'row-p0'
-    case 'P1':
-      return 'row-p1'
-    case 'P2':
-      return 'row-p2'
-    case 'P3':
-      return 'row-p3'
-    default: {
-      const _exhaustive: never = tier
-      return _exhaustive
-    }
-  }
-}

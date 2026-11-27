@@ -433,22 +433,45 @@ body {
   padding: 9px 12px !important;
   font-size: 13px;
   vertical-align: middle;
+  background: #FFFFFF !important;
   border-bottom-color: rgba(17, 24, 39, 0.05) !important;
 }
+.queue-panel .ant-table-tbody > tr:hover > td {
+  background: #F8FAFC !important;
+}
 
-/* Ant Design css-in-js paints cell backgrounds after this file, including sorted and fixed cells. */
-.queue-panel .ant-table-tbody > tr.row-p0 > td { background: #FDECEC !important; }
-.queue-panel .ant-table-tbody > tr.row-p1 > td { background: #FFF4DE !important; }
-.queue-panel .ant-table-tbody > tr.row-p2 > td { background: #E7F0FE !important; }
-.queue-panel .ant-table-tbody > tr.row-p3 > td { background: #E7F6EC !important; }
-.queue-panel .ant-table-tbody > tr.row-p0:hover > td { background: #F8DEDE !important; }
-.queue-panel .ant-table-tbody > tr.row-p1:hover > td { background: #FBE8C8 !important; }
-.queue-panel .ant-table-tbody > tr.row-p2:hover > td { background: #D9E7FD !important; }
-.queue-panel .ant-table-tbody > tr.row-p3:hover > td { background: #D7F0E0 !important; }
-.queue-panel .ant-table-tbody > tr.row-p0 > td:first-child { box-shadow: inset 3px 0 0 #DC2626; }
-.queue-panel .ant-table-tbody > tr.row-p1 > td:first-child { box-shadow: inset 3px 0 0 #D97706; }
-.queue-panel .ant-table-tbody > tr.row-p2 > td:first-child { box-shadow: inset 3px 0 0 #2563EB; }
-.queue-panel .ant-table-tbody > tr.row-p3 > td:first-child { box-shadow: inset 3px 0 0 #16A34A; }
+.table-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.table-tag.prio-p0,
+.table-tag.tone-attention { color: #C2410C; }
+.table-tag.prio-p1,
+.table-tag.tone-wait { color: #1D4ED8; }
+.table-tag.prio-p2,
+.table-tag.tone-neutral,
+.table-tag.tone-quiet { color: #4B5563; }
+.table-tag.prio-p3,
+.table-tag.tone-ok { color: #15803D; }
+.table-tag.tone-caution { color: #B91C1C; }
+.signal-bars {
+  display: block;
+  flex: none;
+}
+.status-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: none;
+}
 
 .drawer-detail {
   padding: 0 0 8px;
