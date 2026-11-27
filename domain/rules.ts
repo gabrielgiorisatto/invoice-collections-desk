@@ -112,13 +112,26 @@ export function compareMorningOrder(a: Invoice, b: Invoice): number {
   return tieBreak(a, b) || a.code.localeCompare(b.code)
 }
 
+/** Newest follow-up. Same-day records are prepended, so a lower index is later. */
+function latestFollowUp(invoice: Invoice) {
+  let latest: { at: string; answered: boolean; index: number } | undefined
+  invoice.followUps.forEach((item, index) => {
+    if (!latest || item.at > latest.at || (item.at === latest.at && index < latest.index)) {
+      latest = { at: item.at, answered: item.answered, index }
+    }
+  })
+  return latest
+}
+
 /**
- * Unanswered only while every recorded follow-up is unanswered.
- * One answered follow-up clears it. A cancelled dispute is not this case.
+ * Unanswered while the latest follow-ups are unanswered.
+ * Two unanswered still counts. One later answered follow-up clears it.
+ * A cancelled dispute is not this case.
  */
 function unansweredChase(invoice: Invoice) {
   if (disputeStatus(invoice) === 'resolved') return false
-  if (invoice.followUps.some(item => item.answered)) return false
+  const latest = latestFollowUp(invoice)
+  if (!latest || latest.answered) return false
   return unansweredFollowUps(invoice) >= 2 && Boolean(invoice.accountManager)
 }
 

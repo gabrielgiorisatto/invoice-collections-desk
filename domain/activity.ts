@@ -1,5 +1,10 @@
-import type { Invoice, InvoiceEvent } from './model.ts'
+import type { FollowUp, Invoice, InvoiceEvent } from './model.ts'
 import { historyLimit } from './model.ts'
+
+export function followUpActivityDetail(followUp: Pick<FollowUp, 'channel' | 'note' | 'answered'>): string {
+  const outcome = followUp.answered ? 'Answered' : 'Unanswered'
+  return `${followUp.channel} · ${outcome} · ${followUp.note}`
+}
 
 function event(id: string, at: string, title: string, detail: string): InvoiceEvent {
   return { id, at, title, detail }
@@ -14,7 +19,7 @@ export function synthesizeActivity(invoice: Invoice): InvoiceEvent[] {
       `${invoice.id}-fu-${index}`,
       followUp.at,
       'Follow-up recorded',
-      `${followUp.channel} · ${followUp.note}`,
+      followUpActivityDetail(followUp),
     ))
   }
 

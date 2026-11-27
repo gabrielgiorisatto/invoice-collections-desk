@@ -7,7 +7,7 @@ import {
   type InvoiceEvent,
   type ResolutionReason,
 } from './model.ts'
-import { synthesizeActivity } from './activity.ts'
+import { followUpActivityDetail, synthesizeActivity } from './activity.ts'
 import { availableActions } from './lifecycle.ts'
 import { disputeStatus, inActiveQueue, remaining, validDate } from './rules.ts'
 
@@ -48,16 +48,17 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
     case 'follow-up': {
       const note = change.value.note.trim()
       const channel = change.value.channel.trim() || 'Email'
+      const answered = Boolean(change.value.answered)
       if (!note) errors.note = 'Describe the follow-up.'
       if (!channel) errors.channel = 'Enter a channel.'
       next = {
         ...invoice,
         followUps: [
-          { at: demoDay, note, channel, answered: Boolean(change.value.answered) },
+          { at: demoDay, note, channel, answered },
           ...invoice.followUps,
         ],
       }
-      next = recordEvent(invoice, next, 'Follow-up recorded', `${channel} · ${note}`)
+      next = recordEvent(invoice, next, 'Follow-up recorded', followUpActivityDetail({ channel, note, answered }))
       break
     }
     case 'promise': {
