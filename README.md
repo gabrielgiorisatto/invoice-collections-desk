@@ -122,7 +122,7 @@ Status is a label. It is separate from the tier. First match wins:
 
 A partial payment does not, by itself, change the tier. Dune can take $500 and stay a broken promise.
 
-On an active invoice the drawer always allows a follow-up, one promise, one dispute, record payment, and resolve without payment. The others stay on screen, disabled, with a reason. The server accepts the same set and rejects the rest.
+On an active invoice the drawer always allows a follow-up, one promise, one dispute, record payment, resolve without payment, and route to the account manager. The others stay on screen, disabled, with a reason. The server accepts the same set and rejects the rest.
 
 | Invoice | Also legal |
 | --- | --- |
@@ -130,10 +130,10 @@ On an active invoice the drawer always allows a follow-up, one promise, one disp
 | Dune, broken promise | Cancel the promise |
 | Crest, promise still ahead | Cancel the promise |
 | Grove, details unverified | Confirm or cancel the details request |
-| Aster, open dispute | Cancel the dispute, route to account manager |
+| Aster, open dispute | Cancel the dispute |
 | Paid or resolved | None. The always-on actions are off too |
 
-A follow-up is a contact note. It does not verify Grove, and it does not raise that flag. One details request: flag it, or confirm or cancel the open one. The invoice stores one promise: record it, update that date, or cancel it. A dispute can be opened when the promise is broken; the broken promise stays. Record payment and resolve without payment stay available together while the invoice is in the queue. Route to the account manager is only for an open dispute, and the screen calls it a simulation.
+A follow-up is a contact note. It does not verify Grove, and it does not raise that flag. One details request: flag it, or confirm or cancel the open one. The invoice stores one promise: record it, update that date, or cancel it. A dispute can be opened when the promise is broken; the broken promise stays. Record payment and resolve without payment stay available together while the invoice is in the queue. Route to the account manager hands them the next step on any active invoice, and the screen calls it a simulation.
 
 ## Cash collected versus follow-ups completed
 

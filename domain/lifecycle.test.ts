@@ -4,6 +4,7 @@ import {
   actionDisabledReason,
   actionDisplayOrder,
   actionGroups,
+  actionPresentation,
   availableActions,
   primaryActionKind,
 } from './lifecycle.ts'
@@ -16,28 +17,28 @@ const byCode = (invoices: Invoice[], code: string) => invoices.find(item => item
 describe('availableActions lifecycle matrix', () => {
   it('open / never contacted (Brook): follow-up, flag, create promise, dispute, payment, resolve', () => {
     expect(availableActions(byCode(seed(), 'Brook'))).toEqual([
-      'follow-up', 'flag-details', 'promise', 'dispute', 'payment', 'resolve',
+      'follow-up', 'flag-details', 'promise', 'dispute', 'payment', 'resolve', 'route-am',
     ])
     expect(primaryActionKind(byCode(seed(), 'Brook'))).toBe('follow-up')
   })
 
   it('broken promise (Dune): follow-up, update or cancel promise, dispute, payment, resolve — no second promise', () => {
     expect(availableActions(byCode(seed(), 'Dune'))).toEqual([
-      'follow-up', 'flag-details', 'promise', 'cancel-promise', 'dispute', 'payment', 'resolve',
+      'follow-up', 'flag-details', 'promise', 'cancel-promise', 'dispute', 'payment', 'resolve', 'route-am',
     ])
     expect(availableActions(byCode(seed(), 'Dune'))).not.toContain('confirm-details')
   })
 
   it('active promise (Crest): follow-up stays; payment and resolve stay; promise is update or cancel', () => {
     expect(availableActions(byCode(seed(), 'Crest'))).toEqual([
-      'follow-up', 'flag-details', 'promise', 'cancel-promise', 'dispute', 'payment', 'resolve',
+      'follow-up', 'flag-details', 'promise', 'cancel-promise', 'dispute', 'payment', 'resolve', 'route-am',
     ])
     expect(primaryActionKind(byCode(seed(), 'Crest'))).toBe('payment')
   })
 
   it('unverified (Grove): confirm or cancel the one request — no second flag', () => {
     expect(availableActions(byCode(seed(), 'Grove'))).toEqual([
-      'follow-up', 'confirm-details', 'cancel-details', 'promise', 'dispute', 'payment', 'resolve',
+      'follow-up', 'confirm-details', 'cancel-details', 'promise', 'dispute', 'payment', 'resolve', 'route-am',
     ])
     expect(primaryActionKind(byCode(seed(), 'Grove'))).toBe('confirm-details')
   })
@@ -149,6 +150,30 @@ describe('availableActions lifecycle matrix', () => {
     expect(priorityTier(dune)).toBe('P1')
     expect(explainPriority(dune).reason).toMatch(/not a cold chase/i)
     expect(dune.followUps).toHaveLength(1)
+  })
+
+  it('routes to the account manager on any active invoice', () => {
+    for (const code of ['Brook', 'Crest', 'Dune', 'East', 'Grove', 'Aster']) {
+      const invoice = byCode(seed(), code)
+      expect(availableActions(invoice)).toContain('route-am')
+      expect(actionPresentation(invoice, 'route-am').hint).toBe('Hands the next step to the account manager.')
+    }
+
+    const brook = byCode(seed(), 'Brook')
+    const handed = applyChange(seed(), seedInvoiceIds.Brook, {
+      type: 'route-am',
+      value: { note: 'Ask the account manager to call AP.' },
+    })
+    expect(handed.errors).toEqual({})
+    const routed = byCode(handed.invoices, 'Brook')
+    expect(routed.ownerRole).toBe('account_manager')
+    expect(routed.followUps).toHaveLength(brook.followUps.length)
+
+    const paid = applyChange(seed(), seedInvoiceIds.Brook, {
+      type: 'payment',
+      value: { amount: 1800, note: 'Paid in full' },
+    })
+    expect(availableActions(byCode(paid.invoices, 'Brook'))).not.toContain('route-am')
   })
 
   it('route to AM does not record a follow-up', () => {

@@ -84,8 +84,8 @@ export const actionCatalog: Record<ActionKind, ActionCopy> = {
   },
   'route-am': {
     label: 'Route to AM',
-    hint: 'Its own action — not a follow-up. Simulation.',
-    purpose: 'Labeled simulation only. Route to the account manager is its own action, not a follow-up. Hands ownership over with a next-action note.',
+    hint: 'Hands the next step to the account manager.',
+    purpose: 'Hand the next step to the account manager. Available on any active invoice. This is its own action, not a follow-up. Labeled simulation.',
     confirm: 'Route (simulation)',
   },
   resolve: {
@@ -124,7 +124,7 @@ export function actionPresentation(invoice: Invoice, kind: ActionKind): ActionCo
  * Which ActionKinds are legal for this invoice.
  * Follow-up is contact-only and always legal in the active queue.
  * Details, promise, and dispute each allow one open item: create/flag, then update or cancel — never a second on top.
- * Payment and resolve are always legal in the active queue.
+ * Payment, resolve, and route to AM are always legal in the active queue.
  * Paid / resolved → none.
  */
 export function availableActions(invoice: Invoice): ActionKind[] {
@@ -136,6 +136,7 @@ export function availableActions(invoice: Invoice): ActionKind[] {
     'dispute',
     'payment',
     'resolve',
+    'route-am',
   ])
 
   if (invoice.invoiceAccuracy === 'unverified_claim') {
@@ -147,10 +148,7 @@ export function availableActions(invoice: Invoice): ActionKind[] {
 
   if (invoice.promise) allowed.add('cancel-promise')
 
-  if (disputeStatus(invoice) === 'open') {
-    allowed.add('cancel-dispute')
-    allowed.add('route-am')
-  }
+  if (disputeStatus(invoice) === 'open') allowed.add('cancel-dispute')
 
   return actionDisplayOrder.filter(kind => allowed.has(kind))
 }
@@ -190,14 +188,13 @@ export function actionDisabledReason(invoice: Invoice, kind: ActionKind): string
       return 'No promise to cancel.'
     case 'cancel-dispute':
       return 'No open dispute to cancel.'
-    case 'route-am':
-      return 'Route to account manager is its own action for an open dispute, not a follow-up.'
     case 'payment':
       return 'Nothing remaining to pay.'
     case 'follow-up':
     case 'promise':
     case 'dispute':
     case 'resolve':
+    case 'route-am':
       return 'Not available for this invoice state.'
     default: {
       const _exhaustive: never = kind

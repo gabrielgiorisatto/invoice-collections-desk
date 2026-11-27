@@ -14,6 +14,6 @@ Each of details, promise, and dispute has **one open item**:
 
 **Record payment** and **Resolve** without payment are always available on an active invoice and are grouped together in the UI.
 
-**Route to AM** is its own action, not a follow-up. It is available for an open dispute and stays a labeled simulation. It does not append a follow-up.
+**Route to AM** is its own action, not a follow-up. It is available on any active invoice and hands the next step to the account manager. It stays a labeled simulation and does not append a follow-up.
 
 UI shows every action, in groups, in a fixed order. Unavailable actions stay disabled with a reason. The primary action is the first preferred kind for the state.
