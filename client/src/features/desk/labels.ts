@@ -1,5 +1,6 @@
 import {
   disputeStatus,
+  explainPriority,
   promiseStatus,
   type DisputeStatus,
   type Invoice,
@@ -8,7 +9,6 @@ import {
   type PromiseStatus,
   type ResolutionReason,
 } from '@domain/index.ts'
-import { invoiceStatus, type StatusKind } from './status.ts'
 
 export function disputeLabel(status: DisputeStatus): string {
   switch (status) {
@@ -68,31 +68,9 @@ export function promiseLabel(status: PromiseStatus): string {
   }
 }
 
-/** One primary status line for the drawer header — not repeated elsewhere. */
+/** Drawer header. Same line Next up shows for this invoice. */
 export function primaryStatusLine(invoice: Invoice): string {
-  const { kind }: { kind: StatusKind } = invoiceStatus(invoice)
-  switch (kind) {
-    case 'open':
-      return 'Open balance — ready to chase.'
-    case 'promised':
-      return 'Active payment promise on file.'
-    case 'broken':
-      return 'Broken payment promise — still unpaid.'
-    case 'disputed':
-      return 'Open commercial dispute — chase paused.'
-    case 'unverified':
-      return 'Invoice details need verification before chase.'
-    case 'partial':
-      return 'Partially paid — remaining balance is open.'
-    case 'paid':
-      return 'Fully paid.'
-    case 'resolved':
-      return 'Resolved without full payment.'
-    default: {
-      const _exhaustive: never = kind
-      return _exhaustive
-    }
-  }
+  return explainPriority(invoice).reason
 }
 
 /** Drawer State block — short structured values, not table glance and not prose. */

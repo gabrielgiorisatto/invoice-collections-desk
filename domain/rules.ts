@@ -79,7 +79,7 @@ export function priorityTier(invoice: Invoice): PriorityTier {
   if (neverContacted(invoice) && dispute !== 'open') return 'P0'
   if (invoice.invoiceAccuracy === 'unverified_claim') return 'P0'
 
-  if (unansweredFollowUps(invoice) >= 2 && invoice.accountManager) return 'P1'
+  if (unansweredChase(invoice)) return 'P1'
   if (dispute === 'open') return 'P1'
 
   return 'P1'
@@ -112,43 +112,33 @@ export function compareMorningOrder(a: Invoice, b: Invoice): number {
   return tieBreak(a, b) || a.code.localeCompare(b.code)
 }
 
+/**
+ * Unanswered only while every recorded follow-up is unanswered.
+ * One answered follow-up clears it. A cancelled dispute is not this case.
+ */
+function unansweredChase(invoice: Invoice) {
+  if (disputeStatus(invoice) === 'resolved') return false
+  if (invoice.followUps.some(item => item.answered)) return false
+  return unansweredFollowUps(invoice) >= 2 && Boolean(invoice.accountManager)
+}
+
+/** One line for Next up and the drawer, from promise, dispute, details, and follow-up outcome. */
 export function explainPriority(invoice: Invoice) {
   const tier = priorityTier(invoice)
+  if (invoice.resolved) return { tier, reason: 'Resolved without full payment.' }
+  if (remaining(invoice) === 0) return { tier, reason: 'Fully paid.' }
+
   const promise = promiseStatus(invoice)
-  switch (tier) {
-    case 'P0':
-      if (promise === 'broken') {
-        return { tier, reason: 'Broken promise — escalate follow-up.' }
-      }
-      if (neverContacted(invoice) && disputeStatus(invoice) !== 'open') {
-        return { tier, reason: 'No contact yet — first follow-up.' }
-      }
-      return { tier, reason: 'Invoice details need verification before chase.' }
-    case 'P1': {
-      const dispute = disputeStatus(invoice)
-      if (dispute === 'open') {
-        return { tier, reason: 'Open dispute — not a cold chase.' }
-      }
-      if (dispute === 'resolved' && invoice.followUps.length > 0) {
-        return { tier, reason: 'Answered follow-ups — dispute closed.' }
-      }
-      if (unansweredFollowUps(invoice) >= 2 && invoice.accountManager) {
-        return { tier, reason: 'Unanswered follow-ups — AM available.' }
-      }
-      if (invoice.followUps.some(item => item.answered)) {
-        return { tier, reason: 'Answered follow-ups — still in the queue.' }
-      }
-      return { tier, reason: 'Still in the queue.' }
-    }
-    case 'P2':
-      return { tier, reason: 'Active promise — wait.' }
-    case 'P3':
-      return { tier, reason: 'Remaining is 0 — out of queue.' }
-    default: {
-      const _exhaustive: never = tier
-      return _exhaustive
-    }
+  const dispute = disputeStatus(invoice)
+  if (dispute === 'open') return { tier, reason: 'Open dispute — not a cold chase.' }
+  if (promise === 'broken') return { tier, reason: 'Broken promise — escalate follow-up.' }
+  if (promise === 'active') return { tier, reason: 'Active promise — wait.' }
+  if (invoice.invoiceAccuracy === 'unverified_claim') {
+    return { tier, reason: 'Invoice details need verification before chase.' }
   }
+  if (neverContacted(invoice)) return { tier, reason: 'No contact yet — first follow-up.' }
+  if (unansweredChase(invoice)) return { tier, reason: 'Unanswered follow-ups — AM available.' }
+  return { tier, reason: 'Open balance — ready to chase.' }
 }
 
 /** Today’s 3: P0 in fixed order, then P1 backfill, capped by MorningCapacity. */

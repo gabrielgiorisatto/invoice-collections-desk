@@ -163,7 +163,7 @@ describe('availableActions lifecycle matrix', () => {
     expect(aster.history?.[0]?.title).toMatch(/routed to am/i)
   })
 
-  it('recomputes Next up after Aster’s dispute is cancelled and follow-ups are answered', () => {
+  it('uses one reason after Aster’s dispute is cancelled and follow-ups are recorded', () => {
     const cancelled = applyChange(seed(), seedInvoiceIds.Aster, {
       type: 'cancel-dispute',
       value: { note: 'Quantity confirmed.' },
@@ -183,10 +183,24 @@ describe('availableActions lifecycle matrix', () => {
       'Email · okok',
       'Email · okok',
     ])
-    const reason = explainPriority(aster).reason
-    expect(reason).toBe('Answered follow-ups — dispute closed.')
-    expect(reason).not.toMatch(/unanswered/i)
-    expect(reason).not.toMatch(/open dispute/i)
+    expect(explainPriority(aster).reason).toBe('Open balance — ready to chase.')
+  })
+
+  it('clears unanswered on East once a follow-up is answered', () => {
     expect(explainPriority(byCode(seed(), 'East')).reason).toBe('Unanswered follow-ups — AM available.')
+    const saved = applyChange(seed(), seedInvoiceIds.East, {
+      type: 'follow-up',
+      value: { note: 'They replied.', channel: 'Phone', answered: true },
+    })
+    expect(saved.errors).toEqual({})
+    const east = byCode(saved.invoices, 'East')
+    expect(east.followUps.some(item => item.answered)).toBe(true)
+    expect(explainPriority(east).reason).toBe('Open balance — ready to chase.')
+  })
+
+  it('explains Grove from details, not from follow-ups', () => {
+    const grove = byCode(seed(), 'Grove')
+    expect(grove.followUps.some(item => !item.answered)).toBe(false)
+    expect(explainPriority(grove).reason).toBe('Invoice details need verification before chase.')
   })
 })
