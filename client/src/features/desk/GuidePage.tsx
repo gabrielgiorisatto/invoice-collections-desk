@@ -14,6 +14,7 @@ const nextUp = [
   'High first: broken promise, then never contacted, then Needs check.',
   'Med fills a slot when fewer than three are High. Low waits.',
   'An open dispute is Med, even when the promise is broken.',
+  'Each card shows the same Status as the queue column.',
   'A card leaves when priority changes, the invoice leaves the queue, or the due window hides it.',
 ] as const
 

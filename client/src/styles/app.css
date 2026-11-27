@@ -410,6 +410,9 @@ body {
   letter-spacing: -0.02em;
   color: #111827;
 }
+.today-status {
+  margin-top: 6px;
+}
 .today-amount {
   margin-top: 8px;
   font-size: 14px;

@@ -575,13 +575,16 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                               type="button"
                               className={drawerId === invoice.id ? 'today-card is-open' : 'today-card'}
                               aria-current={drawerId === invoice.id ? 'true' : undefined}
-                              aria-label={`Open ${invoice.code}, ${invoice.customer}`}
+                              aria-label={`Open ${invoice.code}, ${invoice.customer}, ${glanceStatus(invoice)}`}
                               onClick={() => setDrawerId(invoice.id)}
                             >
                               <span className="today-card-body">
                                 <span className="today-card-top">
                                   <span className="today-company">{invoice.customer}</span>
                                   <PriorityPill tier={tier} />
+                                </span>
+                                <span className="today-status">
+                                  <StatusTag label={glanceStatus(invoice)} tone={glanceStatusTone(invoice)} />
                                 </span>
                                 <span className="today-amount">{money(remaining(invoice))} remaining</span>
                                 <span className="today-reason">{reason}</span>
