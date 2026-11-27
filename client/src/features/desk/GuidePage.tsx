@@ -95,7 +95,7 @@ const actionGroups = [
   {
     label: 'Account manager',
     actions: [
-      { term: 'Route to AM', detail: 'While a dispute is open. Its own action.' },
+      { term: 'Route to AM', detail: 'Hands the next step to the account manager. On any active invoice.' },
     ],
   },
 ] as const
@@ -114,6 +114,15 @@ export default function GuidePage() {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="brief-section" aria-labelledby="brief-calendar">
+        <h2 id="brief-calendar">Calendar</h2>
+        <ul className="brief-points">
+          <li>Three months: last, this, and next.</li>
+          <li>A dot is any recorded activity, not only a due date, promise, payment, or follow-up.</li>
+          <li>Click a day for a short summary of what happened.</li>
+        </ul>
       </section>
 
       <section className="brief-section" aria-labelledby="brief-next">

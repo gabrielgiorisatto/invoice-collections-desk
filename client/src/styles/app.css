@@ -241,6 +241,120 @@ body {
 .kpi-card .value.danger { color: #DC2626; }
 
 .section-block { margin-bottom: 28px; }
+
+.cal-card {
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 10px;
+  padding: 14px 14px 12px;
+}
+.cal-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.cal-month-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #111827;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #94A3B8;
+  line-height: 18px;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 2px 0 3px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+}
+.cal-day.is-empty {
+  cursor: default;
+}
+.cal-day:hover:not(.is-empty) {
+  background: #F8FAFC;
+}
+.cal-day.is-today {
+  border-color: #CBD5E1;
+}
+.cal-day.is-selected {
+  background: #F3F4F6;
+}
+.cal-day:focus-visible {
+  outline: 2px solid #94A3B8;
+  outline-offset: 1px;
+}
+.cal-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #64748B;
+}
+.cal-dot.is-off {
+  background: transparent;
+}
+.cal-day-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #E5E7EB;
+}
+.cal-day-heading {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  font-variant-numeric: tabular-nums;
+}
+.cal-day-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cal-item {
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #111827;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.cal-item:hover {
+  background: #F8FAFC;
+}
+.cal-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #6B7280;
+}
 .section-label {
   display: flex;
   align-items: center;
@@ -771,7 +885,8 @@ body {
 
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .today-grid { grid-template-columns: 1fr; }
+  .today-grid,
+  .cal-months { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {

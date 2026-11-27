@@ -65,6 +65,7 @@ import { loadInvoices } from '../../api/invoices.ts'
 import { fetchSession, signOut } from '../../api/session.ts'
 import ActionModal from './ActionModal.tsx'
 import BrandMark from './BrandMark.tsx'
+import DeskCalendar from './DeskCalendar.tsx'
 import GuidePage from './GuidePage.tsx'
 import LoginScreen from './LoginScreen.tsx'
 import { InvoiceActionButtons } from './InvoiceActions.tsx'
@@ -545,6 +546,8 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                       <div className="value danger">{kpis.disputed}</div>
                     </div>
                   </div>
+
+                  <DeskCalendar invoices={invoices} onOpen={setDrawerId} />
 
                   <section className="section-block" aria-labelledby="next-up">
                     <h2 className="section-label" id="next-up">
