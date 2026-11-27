@@ -38,7 +38,7 @@ const priorities: { tier: PriorityTier; detail: string }[] = [
 
 const columns = [
   { term: 'Customer / Invoice', detail: 'Customer and code. Click the row to open it.' },
-  { term: 'Remaining', detail: 'Amount still unpaid.' },
+  { term: 'Paid', detail: 'Cash recorded, of the invoice total.' },
   { term: 'Due', detail: 'Due date, with overdue days.' },
   { term: 'Priority', detail: 'High, Med, Low, or Clear.' },
   { term: 'Status', detail: 'Open, Promised, Broken, Disputed, Needs check, Partial, Paid, or Resolved.' },

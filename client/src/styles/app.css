@@ -415,11 +415,6 @@ body {
 }
 .today-amount {
   margin-top: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: #111827;
-  font-variant-numeric: tabular-nums;
 }
 .today-reason {
   margin-top: 4px;
@@ -486,13 +481,36 @@ body {
   color: #94A3B8;
   line-height: 1.3;
 }
-.cell-money {
-  font-size: 14px;
+.cell-paid,
+.today-amount,
+.drawer-paid {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cell-paid { justify-content: flex-end; }
+.paid-main {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #111827;
-  font-variant-numeric: tabular-nums;
 }
+.cell-paid .paid-main { font-size: 14px; }
+.today-amount .paid-main { font-size: 14px; }
+.drawer-paid .paid-main {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.paid-of {
+  font-weight: 500;
+  color: #6B7280;
+}
+.cell-paid .paid-of { font-size: 12px; color: #94A3B8; }
+.today-amount .paid-of { font-size: 13px; }
+.drawer-paid .paid-of { font-size: 14px; }
 .due-cell {
   display: flex;
   flex-direction: column;
@@ -619,25 +637,7 @@ body {
   font-weight: 500;
   color: #9CA3AF;
 }
-.drawer-paid {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.drawer-paid-main {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-  color: #111827;
-  font-variant-numeric: tabular-nums;
-}
-.drawer-paid-of {
-  font-size: 14px;
-  font-weight: 500;
-  color: #6B7280;
-}
+.drawer-paid { gap: 6px; }
 .drawer-due-date {
   font-size: 16px;
   font-weight: 700;

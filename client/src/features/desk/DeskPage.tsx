@@ -107,6 +107,15 @@ function paidAmount(invoice: Invoice) {
   return invoice.amount - remaining(invoice)
 }
 
+function PaidOfTotal({ invoice, className }: { invoice: Invoice; className: string }) {
+  return (
+    <span className={className}>
+      <span className="paid-main">{money(paidAmount(invoice))}</span>
+      <span className="paid-of">of {money(invoice.amount)}</span>
+    </span>
+  )
+}
+
 function InvoiceIdentity({ code, customer }: { code: string; customer: string }) {
   return (
     <div className="invoice-identity">
@@ -178,10 +187,7 @@ function InvoiceDetailPanel({
       <div className="drawer-figures">
         <div>
           <div className="drawer-kicker">Paid</div>
-          <div className="drawer-paid">
-            <span className="drawer-paid-main">{money(paidAmount(invoice))}</span>
-            <span className="drawer-paid-of">of {money(invoice.amount)}</span>
-          </div>
+          <PaidOfTotal invoice={invoice} className="drawer-paid" />
         </div>
         <div>
           <div className="drawer-kicker">Due</div>
@@ -372,12 +378,12 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
       render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
     },
     {
-      title: 'Remaining',
-      key: 'remaining',
+      title: 'Paid',
+      key: 'paid',
       align: 'right',
-      width: 110,
-      sorter: (a, b) => compareQueueColumn(a, b, 'remaining'),
-      render: (_value, row) => <span className="cell-money">{money(remaining(row))}</span>,
+      width: 168,
+      sorter: (a, b) => compareQueueColumn(a, b, 'paid'),
+      render: (_value, row) => <PaidOfTotal invoice={row} className="cell-paid" />,
     },
     {
       title: 'Due',
@@ -586,7 +592,7 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                                 <span className="today-status">
                                   <StatusTag label={glanceStatus(invoice)} tone={glanceStatusTone(invoice)} />
                                 </span>
-                                <span className="today-amount">{money(remaining(invoice))} remaining</span>
+                                <PaidOfTotal invoice={invoice} className="today-amount" />
                                 <span className="today-reason">{reason}</span>
                               </span>
                             </button>
@@ -681,7 +687,7 @@ function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 994 }}
+                      scroll={{ x: 1052 }}
                       showSorterTooltip={{ target: 'sorter-icon' }}
                       onRow={record => ({
                         tabIndex: 0,

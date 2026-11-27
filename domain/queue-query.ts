@@ -115,7 +115,7 @@ export function filterByQueueFilters(invoices: Invoice[], filters: QueueFilters)
 
 export type QueueSortColumn =
   | 'invoice'
-  | 'remaining'
+  | 'paid'
   | 'due'
   | 'priority'
   | 'status'
@@ -141,8 +141,8 @@ export function compareQueueColumn(a: Invoice, b: Invoice, column: QueueSortColu
   switch (column) {
     case 'invoice':
       return a.code.localeCompare(b.code) || a.customer.localeCompare(b.customer)
-    case 'remaining':
-      return remaining(a) - remaining(b)
+    case 'paid':
+      return (a.amount - remaining(a)) - (b.amount - remaining(b))
     case 'due':
       return a.dueDate.localeCompare(b.dueDate) || overdueDays(b) - overdueDays(a)
     case 'priority':
