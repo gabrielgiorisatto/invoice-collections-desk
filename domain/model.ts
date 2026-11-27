@@ -70,8 +70,11 @@ export type Change =
   | { type: 'follow-up'; value: { note: string; channel: string; answered: boolean } }
   | { type: 'flag-details'; value: { note: string } }
   | { type: 'confirm-details'; value: { note: string } }
+  | { type: 'cancel-details'; value: { note: string } }
   | { type: 'promise'; value: { dueDate: string; note: string } }
+  | { type: 'cancel-promise'; value: { note: string } }
   | { type: 'payment'; value: { amount: number; note: string } }
   | { type: 'dispute'; value: { reason: string; evidence: string; status: 'open' | 'resolved' } }
+  | { type: 'cancel-dispute'; value: { note: string } }
   | { type: 'route-am'; value: { note: string } }
   | { type: 'resolve'; value: { reason: ResolutionReason; note: string } }

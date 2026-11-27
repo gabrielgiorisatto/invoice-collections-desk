@@ -20,7 +20,7 @@ Open Aster and Brook side by side. Aster’s chase actions are off and say why. 
 
 Record a full payment on Brook. Brook leaves the queue and Paid total moves. Record a follow-up somewhere else. Paid total does not move. Resolve Crest. Crest leaves the queue and Paid total still does not move. Refresh. The session is still there.
 
-The in-app Guide is the four clicks on the desk. It points at the README for how Next up is chosen and what counts as cash.
+The in-app Guide says the same thing in operating language: each dashboard field, what Next up is and when it changes, each status and column, and what each drawer action does and when it is available.
 
 ## The judgment, in one pass
 

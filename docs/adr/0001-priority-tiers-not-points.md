@@ -6,8 +6,8 @@ Collections ranking uses **explainable priority tiers** derived from typed enums
 
 | Tier | Meaning | Rule (first match wins downward) |
 |------|---------|----------------------------------|
-| **P0** | Preferred **Today’s 3** candidates | Fixed order: (1) `PromiseStatus=broken` → (2) never contacted **and** no open dispute → (3) `InvoiceAccuracy=unverified_claim` |
-| **P1** | Other-actor / dispute; queue always; morning backfill only | Unanswered follow-ups ≥ 2 with AM available (e.g. East), **or** `DisputeStatus=open` (e.g. Aster) |
+| **P0** | Preferred **Today’s 3** candidates | Fixed order: (1) `PromiseStatus=broken` **and** dispute is not open → (2) never contacted **and** no open dispute → (3) `InvoiceAccuracy=unverified_claim` |
+| **P1** | Other-actor / dispute; queue always; morning backfill only | Unanswered follow-ups ≥ 2 with AM available (e.g. East), **or** `DisputeStatus=open` (e.g. Aster). An open dispute wins over a broken promise: the promise stays on the invoice, and the invoice is not a cold chase. |
 | **P2** | Wait / monitor | `PromiseStatus=active` |
 | **P3** | Settled for chase | **Remaining** = 0 (or removed via **Resolve** — see ADR-0002) |
 

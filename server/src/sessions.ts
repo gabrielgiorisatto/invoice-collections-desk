@@ -85,6 +85,12 @@ export function parseChange(input: unknown): Change | undefined {
       return { type: 'flag-details', value: { note: asString(value.note) ?? '' } }
     case 'confirm-details':
       return { type: 'confirm-details', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-details':
+      return { type: 'cancel-details', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-promise':
+      return { type: 'cancel-promise', value: { note: asString(value.note) ?? '' } }
+    case 'cancel-dispute':
+      return { type: 'cancel-dispute', value: { note: asString(value.note) ?? '' } }
     default:
       return
   }
@@ -99,6 +105,11 @@ function readSessionId(cookieHeader: string | null): string | undefined {
 function demoSessionCookie(id: string, protocol: string): string {
   const secure = protocol === 'https:' ? '; Secure' : ''
   return `${demoCookieName}=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${secure}`
+}
+
+function clearSessionCookie(protocol: string): string {
+  const secure = protocol === 'https:' ? '; Secure' : ''
+  return `${demoCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`
 }
 
 function loginBody(input: unknown): { username: string; password: string } | undefined {
@@ -131,6 +142,11 @@ export async function handleRequest(request: Request, db: Database) {
       .bind(id, JSON.stringify(seed()))
       .run()
     headers.set('set-cookie', demoSessionCookie(id, url.protocol))
+    return json({ ok: true })
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/logout') {
+    headers.set('set-cookie', clearSessionCookie(url.protocol))
     return json({ ok: true })
   }
 

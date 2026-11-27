@@ -73,12 +73,13 @@ export function priorityTier(invoice: Invoice): PriorityTier {
   const promise = promiseStatus(invoice)
   const dispute = disputeStatus(invoice)
 
-  if (promise === 'broken') return 'P0'
+  // Open dispute is not a cold chase, even when a broken promise is still on the invoice.
+  if (promise === 'broken') return dispute === 'open' ? 'P1' : 'P0'
   if (promise === 'active') return 'P2'
   if (neverContacted(invoice) && dispute !== 'open') return 'P0'
   if (invoice.invoiceAccuracy === 'unverified_claim') return 'P0'
 
-  if (unansweredFollowUps(invoice) >= 2 && invoice.accountManager) return 'P1'
+  if (unansweredChase(invoice)) return 'P1'
   if (dispute === 'open') return 'P1'
 
   return 'P1'
@@ -92,38 +93,65 @@ function p0Rank(invoice: Invoice): number {
   return 99
 }
 
+const tierRank = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
+
 function tieBreak(a: Invoice, b: Invoice) {
   const remainingDiff = remaining(b) - remaining(a)
   if (remainingDiff !== 0) return remainingDiff
   return overdueDays(b) - overdueDays(a)
 }
 
+/** Next up and the queue table share this order. P0 is broken, then never contacted, then unverified. */
+export function compareMorningOrder(a: Invoice, b: Invoice): number {
+  const tierDiff = tierRank[priorityTier(a)] - tierRank[priorityTier(b)]
+  if (tierDiff !== 0) return tierDiff
+  if (priorityTier(a) === 'P0') {
+    const rankDiff = p0Rank(a) - p0Rank(b)
+    if (rankDiff !== 0) return rankDiff
+  }
+  return tieBreak(a, b) || a.code.localeCompare(b.code)
+}
+
+/** Newest follow-up. Same-day records are prepended, so a lower index is later. */
+function latestFollowUp(invoice: Invoice) {
+  let latest: { at: string; answered: boolean; index: number } | undefined
+  invoice.followUps.forEach((item, index) => {
+    if (!latest || item.at > latest.at || (item.at === latest.at && index < latest.index)) {
+      latest = { at: item.at, answered: item.answered, index }
+    }
+  })
+  return latest
+}
+
+/**
+ * Unanswered while the latest follow-ups are unanswered.
+ * Two unanswered still counts. One later answered follow-up clears it.
+ * A cancelled dispute is not this case.
+ */
+function unansweredChase(invoice: Invoice) {
+  if (disputeStatus(invoice) === 'resolved') return false
+  const latest = latestFollowUp(invoice)
+  if (!latest || latest.answered) return false
+  return unansweredFollowUps(invoice) >= 2 && Boolean(invoice.accountManager)
+}
+
+/** One line for Next up and the drawer, from promise, dispute, details, and follow-up outcome. */
 export function explainPriority(invoice: Invoice) {
   const tier = priorityTier(invoice)
+  if (invoice.resolved) return { tier, reason: 'Resolved without full payment.' }
+  if (remaining(invoice) === 0) return { tier, reason: 'Fully paid.' }
+
   const promise = promiseStatus(invoice)
-  switch (tier) {
-    case 'P0':
-      if (promise === 'broken') {
-        return { tier, reason: 'Broken promise — escalate follow-up.' }
-      }
-      if (neverContacted(invoice) && disputeStatus(invoice) !== 'open') {
-        return { tier, reason: 'No contact yet — first follow-up.' }
-      }
-      return { tier, reason: 'Invoice details need verification before chase.' }
-    case 'P1':
-      if (disputeStatus(invoice) === 'open') {
-        return { tier, reason: 'Open dispute — not a cold chase.' }
-      }
-      return { tier, reason: 'Unanswered follow-ups — AM available.' }
-    case 'P2':
-      return { tier, reason: 'Active promise — wait.' }
-    case 'P3':
-      return { tier, reason: 'Remaining is 0 — out of queue.' }
-    default: {
-      const _exhaustive: never = tier
-      return _exhaustive
-    }
+  const dispute = disputeStatus(invoice)
+  if (dispute === 'open') return { tier, reason: 'Open dispute — not a cold chase.' }
+  if (promise === 'broken') return { tier, reason: 'Broken promise — escalate follow-up.' }
+  if (promise === 'active') return { tier, reason: 'Active promise — wait.' }
+  if (invoice.invoiceAccuracy === 'unverified_claim') {
+    return { tier, reason: 'Invoice details need verification before chase.' }
   }
+  if (neverContacted(invoice)) return { tier, reason: 'No contact yet — first follow-up.' }
+  if (unansweredChase(invoice)) return { tier, reason: 'Unanswered follow-ups — AM available.' }
+  return { tier, reason: 'Open balance — ready to chase.' }
 }
 
 /** Today’s 3: P0 in fixed order, then P1 backfill, capped by MorningCapacity. */
@@ -131,10 +159,10 @@ export function todaysThree(invoices: Invoice[]): Invoice[] {
   const active = invoices.filter(inActiveQueue)
   const p0 = active
     .filter(invoice => priorityTier(invoice) === 'P0')
-    .sort((a, b) => p0Rank(a) - p0Rank(b) || tieBreak(a, b) || a.code.localeCompare(b.code))
+    .sort(compareMorningOrder)
   const p1 = active
     .filter(invoice => priorityTier(invoice) === 'P1')
-    .sort((a, b) => tieBreak(a, b) || a.code.localeCompare(b.code))
+    .sort(compareMorningOrder)
 
   return [...p0, ...p1].slice(0, morningCapacity)
 }

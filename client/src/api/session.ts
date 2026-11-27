@@ -16,3 +16,9 @@ export async function signIn(username: string, password: string): Promise<string
   const body = await response.json().catch(() => null) as { error?: string } | null
   return body?.error ?? 'Could not sign in.'
 }
+
+/** Clears the HttpOnly session cookie. Returns false when the server did not accept it. */
+export async function signOut(): Promise<boolean> {
+  const response = await fetch('/api/logout', { method: 'POST' })
+  return response.ok
+}

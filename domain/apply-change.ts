@@ -7,9 +7,9 @@ import {
   type InvoiceEvent,
   type ResolutionReason,
 } from './model.ts'
-import { synthesizeActivity } from './activity.ts'
+import { followUpActivityDetail, synthesizeActivity } from './activity.ts'
 import { availableActions } from './lifecycle.ts'
-import { inActiveQueue, remaining, validDate } from './rules.ts'
+import { disputeStatus, inActiveQueue, remaining, validDate } from './rules.ts'
 
 const resolutionReasons: ResolutionReason[] = ['dispute_closed', 'credit_issued', 'other']
 
@@ -48,16 +48,17 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
     case 'follow-up': {
       const note = change.value.note.trim()
       const channel = change.value.channel.trim() || 'Email'
+      const answered = Boolean(change.value.answered)
       if (!note) errors.note = 'Describe the follow-up.'
       if (!channel) errors.channel = 'Enter a channel.'
       next = {
         ...invoice,
         followUps: [
-          { at: demoDay, note, channel, answered: Boolean(change.value.answered) },
+          { at: demoDay, note, channel, answered },
           ...invoice.followUps,
         ],
       }
-      next = recordEvent(invoice, next, 'Follow-up recorded', `${channel} · ${note}`)
+      next = recordEvent(invoice, next, 'Follow-up recorded', followUpActivityDetail({ channel, note, answered }))
       break
     }
     case 'promise': {
@@ -65,11 +66,25 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
       const dueDate = change.value.dueDate
       if (!note) errors.note = 'Describe the promise.'
       if (!validDate(dueDate)) errors.dueDate = 'Enter a valid promise date.'
+      const existing = invoice.promise
       next = {
         ...invoice,
         promise: { dueDate, note, recordedAt: demoDay },
       }
-      next = recordEvent(invoice, next, 'Promise recorded', `Due ${dueDate} · ${note}`)
+      const detail = existing
+        ? `Was due ${existing.dueDate}; now due ${dueDate} · ${note}`
+        : `Due ${dueDate} · ${note}`
+      next = recordEvent(invoice, next, existing ? 'Promise updated' : 'Promise recorded', detail)
+      break
+    }
+    case 'cancel-promise': {
+      const note = change.value.note.trim()
+      if (!invoice.promise) errors.form = 'No promise to cancel.'
+      if (!note) errors.note = 'Note why the promise is cancelled.'
+      const due = invoice.promise?.dueDate ?? ''
+      const withoutPromise: Invoice = { ...invoice }
+      delete withoutPromise.promise
+      next = recordEvent(invoice, withoutPromise, 'Promise cancelled', `Due ${due} · ${note}`)
       break
     }
     case 'payment': {
@@ -103,14 +118,31 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
       const reason = change.value.reason.trim()
       const evidence = change.value.evidence.trim()
       if (!reason) errors.reason = 'Describe the dispute.'
-      if (change.value.status !== 'open' && change.value.status !== 'resolved') {
-        errors.status = 'Choose open or resolved.'
+      if (change.value.status !== 'open') {
+        errors.status = 'Open or update the one dispute here. Cancel it to close it.'
       }
+      const open = disputeStatus(invoice) === 'open'
       next = {
         ...invoice,
-        dispute: { reason, evidence, status: change.value.status },
+        dispute: { reason, evidence, status: 'open' },
       }
-      next = recordEvent(invoice, next, change.value.status === 'open' ? 'Dispute opened' : 'Dispute updated', reason)
+      next = recordEvent(invoice, next, open ? 'Dispute updated' : 'Dispute opened', reason)
+      break
+    }
+    case 'cancel-dispute': {
+      const note = change.value.note.trim()
+      if (disputeStatus(invoice) !== 'open' || !invoice.dispute) errors.form = 'No open dispute to cancel.'
+      if (!note) errors.note = 'Note why the dispute is cancelled.'
+      const reason = invoice.dispute?.reason ?? ''
+      next = {
+        ...invoice,
+        dispute: {
+          reason,
+          evidence: invoice.dispute?.evidence ?? '',
+          status: 'resolved',
+        },
+      }
+      next = recordEvent(invoice, next, 'Dispute cancelled', note)
       break
     }
     case 'route-am': {
@@ -141,6 +173,17 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
         invoiceAccuracy: 'ok',
       }
       next = recordEvent(invoice, next, 'Details confirmed verified', note)
+      break
+    }
+    case 'cancel-details': {
+      const note = change.value.note.trim()
+      if (invoice.invoiceAccuracy !== 'unverified_claim') errors.form = 'No open details request to cancel.'
+      if (!note) errors.note = 'Note why the details request is cancelled.'
+      next = {
+        ...invoice,
+        invoiceAccuracy: 'ok',
+      }
+      next = recordEvent(invoice, next, 'Details request cancelled', note)
       break
     }
     default: {

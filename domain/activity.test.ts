@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { activityTimeline } from './activity.ts'
 import { applyChange } from './apply-change.ts'
+import { explainPriority } from './rules.ts'
 import { seed, seedInvoiceIds } from './seed.ts'
 import type { Invoice } from './model.ts'
 
@@ -23,7 +24,53 @@ describe('activityTimeline', () => {
     expect(errors).toEqual({})
     const timeline = activityTimeline(byCode(invoices, 'Brook'))
     expect(timeline[0]?.title).toBe('Follow-up recorded')
-    expect(timeline[0]?.detail).toMatch(/Called AP/)
+    expect(timeline[0]?.detail).toBe('Phone · Unanswered · Called AP.')
     expect(timeline.length).toBe(before + 1)
+  })
+
+  it('labels each follow-up Answered or Unanswered, and a later answer clears unanswered', () => {
+    const east = byCode(seed(), 'East')
+    const seeded = activityTimeline(east).filter(item => item.title === 'Follow-up recorded')
+    expect(seeded).toHaveLength(2)
+    expect(seeded.every(item => item.detail.includes('Unanswered'))).toBe(true)
+    expect(explainPriority(east).reason).toBe('Unanswered follow-ups — AM available.')
+
+    const answered = applyChange(seed(), seedInvoiceIds.East, {
+      type: 'follow-up',
+      value: { note: 'They replied.', channel: 'Phone', answered: true },
+    })
+    const afterAnswer = activityTimeline(byCode(answered.invoices, 'East'))
+    expect(afterAnswer[0]?.detail).toBe('Phone · Answered · They replied.')
+    expect(afterAnswer.filter(item => item.title === 'Follow-up recorded').slice(1).every(item => item.detail.includes('Unanswered'))).toBe(true)
+    expect(explainPriority(byCode(answered.invoices, 'East')).reason).toBe('Open balance — ready to chase.')
+
+    const firstUnanswered = applyChange(answered.invoices, seedInvoiceIds.East, {
+      type: 'follow-up',
+      value: { note: 'No reply.', channel: 'Email', answered: false },
+    })
+    const secondUnanswered = applyChange(firstUnanswered.invoices, seedInvoiceIds.East, {
+      type: 'follow-up',
+      value: { note: 'Still no reply.', channel: 'Email', answered: false },
+    })
+    const latest = activityTimeline(byCode(secondUnanswered.invoices, 'East'))
+    expect(latest[0]?.detail).toBe('Email · Unanswered · Still no reply.')
+    expect(latest[1]?.detail).toBe('Email · Unanswered · No reply.')
+    expect(explainPriority(byCode(secondUnanswered.invoices, 'East')).reason).toBe('Unanswered follow-ups — AM available.')
+  })
+
+  it('shows Unanswered or Answered even when the stored activity line omitted the outcome', () => {
+    const brook = byCode(seed(), 'Brook')
+    const off: Invoice = {
+      ...brook,
+      followUps: [{ at: '2026-11-26', note: 'okok', channel: 'Email', answered: false }],
+      history: [{ id: 'off', at: '2026-11-26', title: 'Follow-up recorded', detail: 'Email · okok' }],
+    }
+    const on: Invoice = {
+      ...brook,
+      followUps: [{ at: '2026-11-26', note: 'okok', channel: 'Email', answered: true }],
+      history: [{ id: 'on', at: '2026-11-26', title: 'Follow-up recorded', detail: 'Email · okok' }],
+    }
+    expect(activityTimeline(off)[0]?.detail).toBe('Email · Unanswered · okok')
+    expect(activityTimeline(on)[0]?.detail).toBe('Email · Answered · okok')
   })
 })

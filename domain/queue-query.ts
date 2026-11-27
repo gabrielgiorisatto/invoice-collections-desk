@@ -1,6 +1,7 @@
-import type { Invoice, PriorityTier, PromiseStatus } from './model.ts'
+import type { Invoice, PromiseStatus } from './model.ts'
 import {
   disputeStatus,
+  compareMorningOrder,
   inActiveQueue,
   overdueDays,
   priorityTier,
@@ -114,15 +115,13 @@ export function filterByQueueFilters(invoices: Invoice[], filters: QueueFilters)
 
 export type QueueSortColumn =
   | 'invoice'
-  | 'remaining'
+  | 'paid'
   | 'due'
   | 'priority'
   | 'status'
   | 'promise'
   | 'dispute'
   | 'details'
-
-const tierRank: Record<PriorityTier, number> = { P0: 0, P1: 1, P2: 2, P3: 3 }
 
 const statusRank: Record<ReturnType<typeof queueStatusKind>, number> = {
   broken: 0,
@@ -142,12 +141,12 @@ export function compareQueueColumn(a: Invoice, b: Invoice, column: QueueSortColu
   switch (column) {
     case 'invoice':
       return a.code.localeCompare(b.code) || a.customer.localeCompare(b.customer)
-    case 'remaining':
-      return remaining(a) - remaining(b)
+    case 'paid':
+      return (a.amount - remaining(a)) - (b.amount - remaining(b))
     case 'due':
       return a.dueDate.localeCompare(b.dueDate) || overdueDays(b) - overdueDays(a)
     case 'priority':
-      return tierRank[priorityTier(a)] - tierRank[priorityTier(b)]
+      return compareMorningOrder(a, b)
     case 'status':
       return statusRank[queueStatusKind(a)] - statusRank[queueStatusKind(b)]
     case 'promise':

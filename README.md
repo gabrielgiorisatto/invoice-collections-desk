@@ -40,7 +40,7 @@ The desk stays on the sign-in screen until this login succeeds. It is a simulati
 | --- | --- |
 | `operator` | `demo` |
 
-**Use demo account** fills those fields and signs in. Invoice routes answer 401 until the cookie exists.
+**Use demo account** fills those fields and signs in. Invoice routes answer 401 until the cookie exists. Signing out clears the cookie and returns to this screen.
 
 ## What we left out
 
@@ -60,9 +60,11 @@ Three slots. Fill them from **P0**, in a fixed order, then from **P1**. **P2** a
 
 P0 order:
 
-1. Broken promise (Dune)
+1. Broken promise, and no open dispute (Dune)
 2. Never contacted, and no open dispute (Brook)
 3. Invoice details the customer challenged and nobody has checked (Grove)
+
+A broken promise with an open dispute is P1. It does not take a P0 slot.
 
 On a fresh seed, Next up is Dune, Brook, Grove. East (two unanswered follow-ups, an account manager named) and Aster (open quantity dispute, $12,000) are P1. They enter Next up only when a P0 slot is empty. Aster’s remaining balance is larger, so Aster is the first P1. Crest promised to pay two days after demo day, so Crest is P2 and stays in the queue.
 
@@ -71,19 +73,20 @@ A follow-up does not remove an invoice. Priority does, and only from Next up. Th
 - **Brook.** The first follow-up drops “never contacted.” Brook leaves P0 and becomes P1. Dune and Grove still fill two slots, and Aster, the larger P1, takes the third. Brook stays in the queue.
 - **Dune.** A follow-up leaves the broken promise in place. Dune stays P0 and stays in the first slot.
 
-Paying the remaining balance, or resolving, is what takes an invoice out of the queue. Inside a tier, a larger remaining balance wins, then more days overdue.
+Paying the remaining balance, or resolving, is what takes an invoice out of the queue. Inside P0 the fixed order above wins, so a never-contacted invoice stays ahead of one that only needs a details check. After that, a larger remaining balance wins, then more days overdue. The queue table uses that same order.
 
 ```mermaid
 flowchart TD
   active[Still in the queue] --> broken{Broken promise?}
-  broken -->|Yes| p0[P0]
+  broken -->|Yes, dispute open| p1[P1]
+  broken -->|Yes, no dispute| p0[P0]
   broken -->|No| future{Promise date still ahead?}
   future -->|Yes| p2[P2]
   future -->|No| cold{No follow-ups, and no open dispute?}
   cold -->|Yes| p0
   cold -->|No| details{Details unverified?}
   details -->|Yes| p0
-  details -->|No| p1[P1]
+  details -->|No| p1
   settled[Paid in full or resolved] --> p3[P3]
   p0 --> slots["Next up: P0 in the order above, then P1, stop at 3"]
   p1 --> slots
@@ -95,8 +98,8 @@ P0–P3 come from the enums on the invoice: promise, dispute, whether anyone has
 
 | Tier | On the desk | Rule |
 | --- | --- | --- |
-| P0 | High | Broken promise, else never contacted with no open dispute, else unverified details |
-| P1 | Med | Still open, and not P0 or P2. Named cases: an open dispute (Aster), or at least two unanswered follow-ups with an account manager (East) |
+| P0 | High | Broken promise with no open dispute, else never contacted with no open dispute, else unverified details |
+| P1 | Med | Still open, and not P0 or P2. Named cases: an open dispute, including one on a broken promise (Aster), or at least two unanswered follow-ups with an account manager (East) |
 | P2 | Low | Promise date is still in the future (Crest) |
 | P3 | Clear | Remaining is zero, or the invoice was resolved |
 
@@ -119,18 +122,18 @@ Status is a label. It is separate from the tier. First match wins:
 
 A partial payment does not, by itself, change the tier. Dune can take $500 and stay a broken promise.
 
-The drawer lists eight actions. More than one can be legal at the same time. The others stay on screen, disabled, with a reason. The server accepts the same set and rejects the rest.
+On an active invoice the drawer always allows a follow-up, one promise, one dispute, record payment, resolve without payment, and route to the account manager. The others stay on screen, disabled, with a reason. The server accepts the same set and rejects the rest.
 
-| Invoice | Legal actions |
+| Invoice | Also legal |
 | --- | --- |
-| Brook, open, never contacted | Follow-up, flag details, promise, payment, dispute |
-| Dune, broken promise | Follow-up, promise, payment |
-| Crest, promise still ahead | Payment, resolve |
-| Grove, details unverified | Confirm details, payment, dispute |
-| Aster, open dispute | Payment, dispute, route to account manager, resolve |
-| Paid or resolved | None |
+| Brook, open, never contacted | Flag details |
+| Dune, broken promise | Cancel the promise |
+| Crest, promise still ahead | Cancel the promise |
+| Grove, details unverified | Confirm or cancel the details request |
+| Aster, open dispute | Cancel the dispute |
+| Paid or resolved | None. The always-on actions are off too |
 
-A follow-up is a contact note. It does not verify Grove, and it does not raise that flag. Grove’s path is to confirm the details or open a dispute. The invoice stores one promise. Saving a promise, when that action is legal, replaces the date. While the date is still ahead, the promise action is off, and payment or resolve are the legal pair. Route to the account manager is only for an open dispute, and the screen calls it a simulation.
+A follow-up is a contact note. It does not verify Grove, and it does not raise that flag. One details request: flag it, or confirm or cancel the open one. The invoice stores one promise: record it, update that date, or cancel it. A dispute can be opened when the promise is broken; the broken promise stays. Record payment and resolve without payment stay available together while the invoice is in the queue. Route to the account manager hands them the next step on any active invoice, and the screen calls it a simulation.
 
 ## Cash collected versus follow-ups completed
 

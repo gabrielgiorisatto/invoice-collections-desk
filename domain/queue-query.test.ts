@@ -67,13 +67,16 @@ describe('filterByQueueFilters', () => {
 })
 
 describe('sortQueue', () => {
-  it('sorts by remaining ascending then descending', () => {
-    const asc = sortQueue(seed(), 'remaining', 'ascend').map(item => item.code)
-    const desc = sortQueue(seed(), 'remaining', 'descend').map(item => item.code)
-    expect(asc[0]).toBe('Brook') // 1800
-    expect(asc[asc.length - 1]).toBe('Aster') // 12000
-    expect(desc[0]).toBe('Aster')
-    expect(desc[desc.length - 1]).toBe('Brook')
+  it('sorts by paid amount ascending then descending', () => {
+    const invoices = seed().map(invoice =>
+      invoice.code === 'Dune'
+        ? { ...invoice, payments: [{ at: '2026-11-26', amount: 500, note: 'Partial' }] }
+        : invoice,
+    )
+    const asc = sortQueue(invoices, 'paid', 'ascend').map(item => item.code)
+    const desc = sortQueue(invoices, 'paid', 'descend').map(item => item.code)
+    expect(asc[asc.length - 1]).toBe('Dune')
+    expect(desc[0]).toBe('Dune')
   })
 
   it('sorts by priority High→Clear (ascend = High first)', () => {

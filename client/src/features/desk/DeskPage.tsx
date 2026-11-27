@@ -29,8 +29,10 @@ import {
 } from '@ant-design/icons'
 import {
   activityTimeline,
+  compareMorningOrder,
   compareQueueColumn,
   dateFilterLabels,
+  demoAccount,
   demoDay,
   describeQueueFilters,
   deskEmptyCopy,
@@ -60,11 +62,13 @@ import {
   type QueueStatusFacet,
 } from '@domain/index.ts'
 import { loadInvoices } from '../../api/invoices.ts'
-import { fetchSession } from '../../api/session.ts'
+import { fetchSession, signOut } from '../../api/session.ts'
 import ActionModal from './ActionModal.tsx'
 import BrandMark from './BrandMark.tsx'
+import DeskCalendar from './DeskCalendar.tsx'
+import GuidePage from './GuidePage.tsx'
 import LoginScreen from './LoginScreen.tsx'
-import { InvoiceActionButtons, InvoiceRowMenu } from './InvoiceActions.tsx'
+import { InvoiceActionButtons } from './InvoiceActions.tsx'
 import {
   detailsStateValue,
   disputeStateValue,
@@ -72,6 +76,8 @@ import {
   primaryStatusLine,
   promiseStateValue,
 } from './labels.ts'
+import type { ActionKind } from './primaryAction.ts'
+import { PriorityTag, StatusTag, TableTag } from './queueMarks.tsx'
 import {
   glanceDetails,
   glanceDetailsTone,
@@ -82,16 +88,12 @@ import {
   glancePromiseTone,
   glanceStatus,
   glanceStatusTone,
-  priorityRowClass,
   priorityToneClass,
   type GlanceTone,
 } from './tableGlance.ts'
-import type { ActionKind } from './primaryAction.ts'
 
 const { Sider, Content } = Layout
 const { Text } = Typography
-
-const tierOrder = { P0: 0, P1: 1, P2: 2, P3: 3 } as const
 
 function money(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -105,6 +107,15 @@ function paidAmount(invoice: Invoice) {
   return invoice.amount - remaining(invoice)
 }
 
+function PaidOfTotal({ invoice, className }: { invoice: Invoice; className: string }) {
+  return (
+    <span className={className}>
+      <span className="paid-main">{money(paidAmount(invoice))}</span>
+      <span className="paid-of">of {money(invoice.amount)}</span>
+    </span>
+  )
+}
+
 function InvoiceIdentity({ code, customer }: { code: string; customer: string }) {
   return (
     <div className="invoice-identity">
@@ -112,11 +123,6 @@ function InvoiceIdentity({ code, customer }: { code: string; customer: string })
       <span className="invoice-code-muted">{code}</span>
     </div>
   )
-}
-
-function GlancePill({ label, tone }: { label: string; tone: GlanceTone }) {
-  if (label === '—') return <span className="cell-dash">—</span>
-  return <span className={`pill tone-${tone}`}>{label}</span>
 }
 
 function PriorityPill({ tier }: { tier: PriorityTier }) {
@@ -181,10 +187,7 @@ function InvoiceDetailPanel({
       <div className="drawer-figures">
         <div>
           <div className="drawer-kicker">Paid</div>
-          <div className="drawer-paid">
-            <span className="drawer-paid-main">{money(paidAmount(invoice))}</span>
-            <span className="drawer-paid-of">of {money(invoice.amount)}</span>
-          </div>
+          <PaidOfTotal invoice={invoice} className="drawer-paid" />
         </div>
         <div>
           <div className="drawer-kicker">Due</div>
@@ -217,32 +220,6 @@ function InvoiceDetailPanel({
   )
 }
 
-const walkthrough = [
-  { label: 'Next up', detail: 'Open a card.' },
-  { label: 'Invoice', detail: 'Read the status, Paid, and Due.' },
-  { label: 'Record follow-up', detail: 'Take the blue action.' },
-  { label: 'Queue', detail: 'Find that invoice in the table.' },
-] as const
-
-function GuidePage() {
-  return (
-    <>
-      <ol className="walkthrough">
-        {walkthrough.map((step, index) => (
-          <li key={step.label}>
-            <span className="walk-index" aria-hidden="true">{index + 1}</span>
-            <div className="walk-card">
-              <span className="walk-label">{step.label}</span>
-              <p>{step.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-      <p className="page-subtitle">How Next up is chosen, and what counts as cash, is in the README.</p>
-    </>
-  )
-}
-
 function useNarrowLayout() {
   const query = '(max-width: 900px)'
   const [narrow, setNarrow] = useState(() => window.matchMedia(query).matches)
@@ -255,7 +232,17 @@ function useNarrowLayout() {
   return narrow
 }
 
-function SideNav({ nav, onSelect }: { nav: string; onSelect: (key: string) => void }) {
+function SideNav({
+  nav,
+  onSelect,
+  signingOut,
+  onSignOut,
+}: {
+  nav: string
+  onSelect: (key: string) => void
+  signingOut: boolean
+  onSignOut: () => void
+}) {
   return (
     <div className="side-nav">
       <div className="brand">
@@ -273,12 +260,26 @@ function SideNav({ nav, onSelect }: { nav: string; onSelect: (key: string) => vo
           { key: 'guide', icon: <BookOutlined />, label: 'Guide' },
         ]}
       />
-      <div className="sider-foot">Demo {demoDay}</div>
+      <div className="sider-foot">
+        <div className="sider-day">Demo {demoDay}</div>
+        <div className="sider-user">
+          <span className="sider-user-name">{demoAccount.name}</span>
+          <span className="sider-user-role">{demoAccount.role}</span>
+        </div>
+        <button
+          type="button"
+          className="sider-logout"
+          disabled={signingOut}
+          onClick={onSignOut}
+        >
+          Logout
+        </button>
+      </div>
     </div>
   )
 }
 
-function DeskWorkspace() {
+function DeskWorkspace({ onSignedOut }: { onSignedOut: () => void }) {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
   const [drawerId, setDrawerId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -288,6 +289,7 @@ function DeskWorkspace() {
   const [dateFilter, setDateFilter] = useState<DateFilterPreset>('all-time')
   const [queueFilters, setQueueFilters] = useState<QueueFilters>(emptyQueueFilters)
   const [actionTarget, setActionTarget] = useState<{ id: string; kind: ActionKind } | null>(null)
+  const [signingOut, setSigningOut] = useState(false)
   const narrow = useNarrowLayout()
   const { message } = App.useApp()
 
@@ -318,12 +320,7 @@ function DeskWorkspace() {
   const queue = useMemo(() => {
     const rows = queueView ? visibleQueue(queueView, filtered, queueFilters, showPaid) : []
     // Default order until the operator clicks a column sorter.
-    return [...rows].sort(
-      (a, b) =>
-        tierOrder[priorityTier(a)] - tierOrder[priorityTier(b)]
-        || remaining(b) - remaining(a)
-        || overdueDays(b) - overdueDays(a),
-    )
+    return [...rows].sort(compareMorningOrder)
   }, [queueView, filtered, queueFilters, showPaid])
   const drawerInvoice = invoices?.find(item => item.id === drawerId) ?? null
   const actionInvoice = invoices?.find(item => item.id === actionTarget?.id) ?? null
@@ -354,6 +351,20 @@ function DeskWorkspace() {
     setActionTarget({ id: invoiceId, kind })
   }
 
+  async function signOutOfDesk() {
+    if (signingOut) return
+    setSigningOut(true)
+    try {
+      const cleared = await signOut()
+      if (cleared) onSignedOut()
+      else setError('Could not sign out.')
+    } catch {
+      setError('Could not sign out.')
+    } finally {
+      setSigningOut(false)
+    }
+  }
+
   function applyDeskUpdate(next: Invoice[]) {
     // Replace session snapshot so Next up + queue re-sort by priority tiers.
     setInvoices(next)
@@ -367,12 +378,12 @@ function DeskWorkspace() {
       render: (_value, row) => <InvoiceIdentity code={row.code} customer={row.customer} />,
     },
     {
-      title: 'Remaining',
-      key: 'remaining',
+      title: 'Paid',
+      key: 'paid',
       align: 'right',
-      width: 110,
-      sorter: (a, b) => compareQueueColumn(a, b, 'remaining'),
-      render: (_value, row) => <span className="cell-money">{money(remaining(row))}</span>,
+      width: 168,
+      sorter: (a, b) => compareQueueColumn(a, b, 'paid'),
+      render: (_value, row) => <PaidOfTotal invoice={row} className="cell-paid" />,
     },
     {
       title: 'Due',
@@ -384,56 +395,44 @@ function DeskWorkspace() {
     {
       title: 'Priority',
       key: 'priority',
-      width: 96,
+      width: 118,
       sorter: (a, b) => compareQueueColumn(a, b, 'priority'),
-      render: (_value, row) => <PriorityPill tier={priorityTier(row)} />,
+      render: (_value, row) => <PriorityTag tier={priorityTier(row)} />,
     },
     {
       title: 'Status',
       key: 'status',
       width: 110,
       sorter: (a, b) => compareQueueColumn(a, b, 'status'),
-      render: (_value, row) => <GlancePill label={glanceStatus(row)} tone={glanceStatusTone(row)} />,
+      render: (_value, row) => <StatusTag label={glanceStatus(row)} tone={glanceStatusTone(row)} />,
     },
     {
       title: 'Promise',
       key: 'promise',
       width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'promise'),
-      render: (_value, row) => <GlancePill label={glancePromise(row)} tone={glancePromiseTone(row)} />,
+      render: (_value, row) => <TableTag label={glancePromise(row)} tone={glancePromiseTone(row)} />,
     },
     {
       title: 'Dispute',
       key: 'dispute',
       width: 100,
       sorter: (a, b) => compareQueueColumn(a, b, 'dispute'),
-      render: (_value, row) => <GlancePill label={glanceDispute(row)} tone={glanceDisputeTone(row)} />,
+      render: (_value, row) => <TableTag label={glanceDispute(row)} tone={glanceDisputeTone(row)} />,
     },
     {
       title: 'Details',
       key: 'details',
       width: 120,
       sorter: (a, b) => compareQueueColumn(a, b, 'details'),
-      render: (_value, row) => <GlancePill label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
-    },
-    {
-      title: '',
-      key: 'actions',
-      width: 108,
-      fixed: 'right',
-      render: (_value, row) => (
-        <InvoiceRowMenu
-          invoice={row}
-          onAction={kind => openAction(row.id, kind)}
-        />
-      ),
+      render: (_value, row) => <TableTag label={glanceDetails(row)} tone={glanceDetailsTone(row)} />,
     },
   ]
 
   const onGuide = nav === 'guide'
 
   return (
-    <Layout className="desk-shell" style={{ minHeight: '100%' }}>
+    <Layout className="desk-shell">
       {narrow ? (
         <Drawer
           placement="left"
@@ -446,6 +445,8 @@ function DeskWorkspace() {
         >
           <SideNav
             nav={nav}
+            signingOut={signingOut}
+            onSignOut={() => { void signOutOfDesk() }}
             onSelect={key => {
               setNav(key)
               setNavOpen(false)
@@ -454,7 +455,12 @@ function DeskWorkspace() {
         </Drawer>
       ) : (
         <Sider width={220} theme="light" trigger={null} className="desk-sider">
-          <SideNav nav={nav} onSelect={setNav} />
+          <SideNav
+            nav={nav}
+            signingOut={signingOut}
+            onSignOut={() => { void signOutOfDesk() }}
+            onSelect={setNav}
+          />
         </Sider>
       )}
 
@@ -488,7 +494,7 @@ function DeskWorkspace() {
                 <h1 className="page-title">{onGuide ? 'Guide' : 'Desk'}</h1>
                 <p className="page-subtitle">
                   {onGuide
-                    ? 'Next up, open the invoice, one action, then the queue.'
+                    ? 'What the desk is showing, and when each action is available.'
                     : 'Collections operations desk for invoice follow-ups.'}
                 </p>
               </header>
@@ -547,6 +553,8 @@ function DeskWorkspace() {
                     </div>
                   </div>
 
+                  <DeskCalendar invoices={invoices} onOpen={setDrawerId} />
+
                   <section className="section-block" aria-labelledby="next-up">
                     <h2 className="section-label" id="next-up">
                       <FlagOutlined className="section-icon accent" aria-hidden />
@@ -573,7 +581,7 @@ function DeskWorkspace() {
                               type="button"
                               className={drawerId === invoice.id ? 'today-card is-open' : 'today-card'}
                               aria-current={drawerId === invoice.id ? 'true' : undefined}
-                              aria-label={`Open ${invoice.code}, ${invoice.customer}`}
+                              aria-label={`Open ${invoice.code}, ${invoice.customer}, ${glanceStatus(invoice)}`}
                               onClick={() => setDrawerId(invoice.id)}
                             >
                               <span className="today-card-body">
@@ -581,7 +589,10 @@ function DeskWorkspace() {
                                   <span className="today-company">{invoice.customer}</span>
                                   <PriorityPill tier={tier} />
                                 </span>
-                                <span className="today-amount">{money(remaining(invoice))} remaining</span>
+                                <span className="today-status">
+                                  <StatusTag label={glanceStatus(invoice)} tone={glanceStatusTone(invoice)} />
+                                </span>
+                                <PaidOfTotal invoice={invoice} className="today-amount" />
                                 <span className="today-reason">{reason}</span>
                               </span>
                             </button>
@@ -676,9 +687,8 @@ function DeskWorkspace() {
                       pagination={false}
                       dataSource={queue}
                       columns={columns}
-                      scroll={{ x: 1080 }}
+                      scroll={{ x: 1052 }}
                       showSorterTooltip={{ target: 'sorter-icon' }}
-                      rowClassName={record => priorityRowClass(record)}
                       onRow={record => ({
                         tabIndex: 0,
                         role: 'button',
@@ -788,5 +798,5 @@ export default function DeskPage() {
     )
   }
   if (!authed) return <LoginScreen onSignedIn={() => setAuthed(true)} />
-  return <DeskWorkspace />
+  return <DeskWorkspace onSignedOut={() => setAuthed(false)} />
 }

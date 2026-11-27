@@ -2,15 +2,18 @@
 
 Operator **ActionKind**s are gated by invoice state via `availableActions(invoice)`, enforced in `applyChange` (server and domain). **State** (promise, dispute, invoice details) is read-only in the UI; **actions** are verbs that change state and append history. Paid / resolved invoices have no actions.
 
-Follow-up is a contact note only — it never sets InvoiceAccuracy to needs verification. Use **Flag details for review** / **Confirm details verified** for accuracy.
+Follow-up is contact only, and it is always available on an active invoice. It never sets InvoiceAccuracy, never records a promise or dispute, and it is not how you route to an account manager.
 
-| State | Allowed actions |
-|-------|-----------------|
-| Open / details verified | follow-up, flag-details, promise, dispute (+ payment if Remaining > 0) |
-| Broken promise | follow-up, promise, payment |
-| Active promise | payment, resolve only |
-| Needs verification | confirm-details, dispute (+ payment if Remaining > 0) |
-| Open dispute | dispute, route-am, resolve (+ payment if Remaining > 0) |
-| Paid or resolved | none |
+Each of details, promise, and dispute has **one open item**:
 
-UI shows the full action set in fixed order; unavailable actions are disabled with a reason. Primary action is the first preferred kind for the state. Route to AM remains a labeled simulation.
+| Item | When none is open | When one is open |
+|------|-------------------|------------------|
+| Invoice details | **Flag** the single request | **Confirm** or **cancel** only. No second flag. |
+| Promise | **Create** the one promise | **Update** that promise or **cancel** it. No second promise on top. |
+| Dispute | **Create** the one dispute | **Update** or **cancel**. Allowed even when a promise is broken. The broken promise stays on the invoice and in history. An open dispute is not a cold chase (P1, not the broken-promise P0). |
+
+**Record payment** and **Resolve** without payment are always available on an active invoice and are grouped together in the UI.
+
+**Route to AM** is its own action, not a follow-up. It is available on any active invoice and hands the next step to the account manager. It stays a labeled simulation and does not append a follow-up.
+
+UI shows every action, in groups, in a fixed order. Unavailable actions stay disabled with a reason. The primary action is the first preferred kind for the state.

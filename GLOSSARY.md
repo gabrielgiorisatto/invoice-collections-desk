@@ -29,15 +29,15 @@ _Avoid_: Close reason, disposition (alone)
 ### Typed status enums
 
 **PromiseStatus**:
-Whether a dated payment promise exists and whether it still holds: `none`, `active` (due date on or after demo day), or `broken` (due date before demo day and still unpaid).
+Whether the one dated payment promise exists and whether it still holds: `none`, `active` (due date on or after demo day), or `broken` (due date before demo day and still unpaid). Create, update, or cancel that one promise. Do not stack a second promise on top. Cancelling removes it from the current state; the commitment stays in history.
 _Avoid_: Commitment, pledge, “promised” as a free-text label
 
 **DisputeStatus**:
-Commercial / quantity dispute state: `none`, `open`, or `resolved`.
+Commercial / quantity dispute state: `none`, `open`, or `resolved`. Create, update, or cancel the one open dispute, including when a promise is broken. A broken promise stays on the invoice. An open dispute is not a cold chase.
 _Avoid_: Claim (use **InvoiceAccuracy** for accuracy claims), ticket
 
 **InvoiceAccuracy**:
-Whether invoice details are trusted for chase: `ok` (verified) or `unverified_claim` (needs verification). Set only by **Flag details for review** / **Confirm details verified** — never by follow-up.
+Whether invoice details are trusted for chase: `ok` (verified) or `unverified_claim` (one open details request). If none is open, flag one. If one is open, confirm it or cancel it — no second flag. Follow-up never sets this.
 _Avoid_: Incomplete info, data quality
 
 **OwnerRole**:
@@ -45,7 +45,7 @@ Who owns the next action: `operator` (finance operator) or `account_manager` (si
 _Avoid_: Assignee, owner (alone)
 
 **ActionKind**:
-Operator verbs that change invoice state and append history: follow-up (contact note only), flag details for review, confirm details verified, record promise, record payment, open or update dispute, route to account manager, or **Resolve** without payment. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
+Operator verbs that change invoice state and append history: follow-up (contact note only, always available on an active invoice), flag / confirm / cancel the one details request, create / update / cancel the one promise, record payment, open / update / cancel the one dispute, route to account manager (its own action, not a follow-up), or **Resolve** without payment. Payment and resolve are always available together on an active invoice. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
 _Avoid_: Event, mutation, update
 
 ### Morning focus
