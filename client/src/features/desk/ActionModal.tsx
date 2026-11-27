@@ -193,7 +193,13 @@ export default function ActionModal({ invoice, kind, open, onClose, onSaved }: P
                 options={[{ value: 'Email' }, { value: 'Phone' }, { value: 'Portal' }]}
               />
             </Form.Item>
-            <Form.Item name="answered" valuePropName="checked" label="Answered">
+            <Form.Item
+              name="answered"
+              valuePropName="checked"
+              initialValue={false}
+              label="Answered"
+              getValueFromEvent={event => event?.target?.checked === true}
+            >
               <Checkbox>Customer responded</Checkbox>
             </Form.Item>
           </>

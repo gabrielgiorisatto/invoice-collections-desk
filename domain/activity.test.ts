@@ -57,4 +57,20 @@ describe('activityTimeline', () => {
     expect(latest[1]?.detail).toBe('Email · Unanswered · No reply.')
     expect(explainPriority(byCode(secondUnanswered.invoices, 'East')).reason).toBe('Unanswered follow-ups — AM available.')
   })
+
+  it('shows Unanswered or Answered even when the stored activity line omitted the outcome', () => {
+    const brook = byCode(seed(), 'Brook')
+    const off: Invoice = {
+      ...brook,
+      followUps: [{ at: '2026-11-26', note: 'okok', channel: 'Email', answered: false }],
+      history: [{ id: 'off', at: '2026-11-26', title: 'Follow-up recorded', detail: 'Email · okok' }],
+    }
+    const on: Invoice = {
+      ...brook,
+      followUps: [{ at: '2026-11-26', note: 'okok', channel: 'Email', answered: true }],
+      history: [{ id: 'on', at: '2026-11-26', title: 'Follow-up recorded', detail: 'Email · okok' }],
+    }
+    expect(activityTimeline(off)[0]?.detail).toBe('Email · Unanswered · okok')
+    expect(activityTimeline(on)[0]?.detail).toBe('Email · Answered · okok')
+  })
 })

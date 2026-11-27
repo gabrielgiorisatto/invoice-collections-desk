@@ -2,8 +2,31 @@ import type { FollowUp, Invoice, InvoiceEvent } from './model.ts'
 import { historyLimit } from './model.ts'
 
 export function followUpActivityDetail(followUp: Pick<FollowUp, 'channel' | 'note' | 'answered'>): string {
-  const outcome = followUp.answered ? 'Answered' : 'Unanswered'
+  const outcome = followUp.answered === true ? 'Answered' : 'Unanswered'
   return `${followUp.channel} · ${outcome} · ${followUp.note}`
+}
+
+function sameFollowUpLine(detail: string, followUp: FollowUp): boolean {
+  const plain = `${followUp.channel} · ${followUp.note}`
+  return detail === plain
+    || detail === `${followUp.channel} · Answered · ${followUp.note}`
+    || detail === `${followUp.channel} · Unanswered · ${followUp.note}`
+}
+
+/** History may have been stored as "channel · note". The follow-up boolean is the outcome. */
+function stampFollowUpOutcomes(invoice: Invoice, events: InvoiceEvent[]): InvoiceEvent[] {
+  const unused = invoice.followUps.map(item => ({ item, used: false }))
+  return events.map(entry => {
+    if (entry.title !== 'Follow-up recorded') return entry
+    const match = unused.find(candidate =>
+      !candidate.used
+      && entry.at.slice(0, 10) === candidate.item.at.slice(0, 10)
+      && sameFollowUpLine(entry.detail, candidate.item),
+    )
+    if (!match) return entry
+    match.used = true
+    return { ...entry, detail: followUpActivityDetail(match.item) }
+  })
 }
 
 function event(id: string, at: string, title: string, detail: string): InvoiceEvent {
@@ -66,8 +89,10 @@ export function synthesizeActivity(invoice: Invoice): InvoiceEvent[] {
 
 /** Newest-first activity for the drawer. Prefer recorded history; else synthesize. */
 export function activityTimeline(invoice: Invoice): InvoiceEvent[] {
-  if (invoice.history && invoice.history.length > 0) {
-    return [...invoice.history].sort((a, b) => b.at.localeCompare(a.at))
-  }
-  return synthesizeActivity(invoice)
+  const events = invoice.history && invoice.history.length > 0
+    ? [...invoice.history]
+    : synthesizeActivity(invoice)
+  return stampFollowUpOutcomes(invoice, events)
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, historyLimit)
 }
