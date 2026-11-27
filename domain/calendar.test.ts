@@ -5,12 +5,18 @@ import { demoDay } from './model.ts'
 import { seed, seedInvoiceIds } from './seed.ts'
 
 describe('desk calendar', () => {
-  it('shows the month that contains the demo day', () => {
+  it('shows the month that contains the demo day, and any other month', () => {
     const month = calendarMonth()
     expect(month.key).toBe('2026-11')
     expect(month.label).toBe('November 2026')
     expect(month.weeks[0]?.[0]).toBe('2026-11-01')
     expect(month.weeks.every(week => week.length === 7)).toBe(true)
+
+    const earlier = calendarMonth('2024-02-15')
+    expect(earlier.key).toBe('2024-02')
+    expect(earlier.label).toBe('February 2024')
+    expect(earlier.weeks.every(week => week.length === 7)).toBe(true)
+    expect(earlier.weeks.flat().filter(Boolean)).toHaveLength(29)
   })
 
   it('marks activity, invoice due dates, and promise dates', () => {
@@ -21,6 +27,19 @@ describe('desk calendar', () => {
     expect(titles.has('Dispute opened')).toBe(true)
     expect(titles.has('Invoice due')).toBe(true)
     expect(titles.has('Promise due')).toBe(true)
+    expect(marks.find(mark => mark.title === 'Invoice due')?.kind).toBe('due')
+    expect(marks.find(mark => mark.title === 'Promise due')?.kind).toBe('promise')
+    expect(marks.find(mark => mark.title === 'Follow-up recorded')?.kind).toBe('activity')
+    expect(marks.find(mark => mark.title === 'Promise recorded')?.kind).toBe('activity')
+
+    const paid = applyChange(seed(), seedInvoiceIds.Brook, {
+      type: 'payment',
+      value: { amount: 100, note: 'Wire' },
+    })
+    const payment = calendarMarks(paid.invoices).find(mark => mark.code === 'Brook' && mark.title === 'Payment received')
+    expect(payment?.kind).toBe('payment')
+    expect(payment?.date).toBe(demoDay)
+    expect(payment?.detail).toContain('Wire')
 
     const brook = seed().find(invoice => invoice.code === 'Brook')!
     expect(marksOn(marks, brook.dueDate).some(mark => mark.code === 'Brook' && mark.title === 'Invoice due')).toBe(true)
@@ -65,5 +84,10 @@ describe('desk calendar', () => {
     expect(dune.promise!.dueDate).toBe(grove.dueDate)
     const shared = groups.find(group => group.date === grove.dueDate)!
     expect(shared.marks.map(mark => mark.title)).toEqual(['Invoice due', 'Promise due'])
+
+    const october = monthAgenda(seed(), '2026-10-01')
+    expect(october.every(group => group.date.startsWith('2026-10'))).toBe(true)
+    expect(october.some(group => group.marks.some(mark => mark.code === 'Aster' && mark.kind === 'due'))).toBe(true)
+    expect(october.some(group => group.date === brook.dueDate)).toBe(false)
   })
 })

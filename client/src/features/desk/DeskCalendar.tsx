@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarOutlined } from '@ant-design/icons'
+import { CalendarOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import {
   calendarMarks,
   calendarMonth,
-  calendarSummary,
   demoDay,
   marksOn,
   monthAgenda,
+  type CalendarMark,
+  type CalendarMarkKind,
   type Invoice,
 } from '@domain/index.ts'
 
@@ -16,6 +17,7 @@ const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const
+const kindOrder: CalendarMarkKind[] = ['due', 'promise', 'payment', 'activity']
 
 function formatDay(date: string): string {
   const [yearText, monthText, dayText] = date.split('-')
@@ -26,6 +28,35 @@ function formatDay(date: string): string {
   return `${weekdayNames[utc.getUTCDay()]}, ${monthNames[utc.getUTCMonth()]} ${day}`
 }
 
+function dateInMonth(year: number, month: number, day: number): string {
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  const clamped = Math.min(Math.max(day, 1), last)
+  return `${year}-${String(month).padStart(2, '0')}-${String(clamped).padStart(2, '0')}`
+}
+
+function CalendarEntry({
+  mark,
+  onOpen,
+}: {
+  mark: CalendarMark
+  onOpen: (invoiceId: string) => void
+}) {
+  const detail = mark.detail.trim()
+  return (
+    <button type="button" className={`cal-item kind-${mark.kind}`} onClick={() => onOpen(mark.invoiceId)}>
+      <span className="cal-item-name">
+        {mark.customer}
+        <span className="cal-item-code">{mark.code}</span>
+      </span>
+      <span className="cal-item-type">
+        <span className={`cal-dot kind-${mark.kind}`} aria-hidden="true" />
+        {mark.title}
+      </span>
+      {detail ? <span className="cal-item-detail">{detail}</span> : null}
+    </button>
+  )
+}
+
 export default function DeskCalendar({
   invoices,
   onOpen,
@@ -33,20 +64,47 @@ export default function DeskCalendar({
   invoices: Invoice[]
   onOpen: (invoiceId: string) => void
 }) {
-  const month = useMemo(() => calendarMonth(), [])
+  const [view, setView] = useState(() => {
+    const [yearText, monthText, dayText] = demoDay.split('-')
+    return { year: Number(yearText), month: Number(monthText), day: Number(dayText) }
+  })
+  const anchor = dateInMonth(view.year, view.month, 1)
+  const selected = dateInMonth(view.year, view.month, view.day)
+  const month = useMemo(() => calendarMonth(anchor), [anchor])
   const marks = useMemo(() => calendarMarks(invoices), [invoices])
-  const agenda = useMemo(() => monthAgenda(invoices), [invoices])
-  const [selected, setSelected] = useState(demoDay)
+  const agenda = useMemo(() => monthAgenda(invoices, anchor), [invoices, anchor])
   const dayMarks = marksOn(marks, selected)
-  const dates = useMemo(() => new Set(marks.map(mark => mark.date)), [marks])
   const agendaRef = useRef<HTMLDivElement>(null)
+  const years = useMemo(() => {
+    const markYears = marks
+      .map(mark => Number(mark.date.slice(0, 4)))
+      .filter(year => Number.isFinite(year))
+    const demoYear = Number(demoDay.slice(0, 4))
+    const known = markYears.length > 0 ? markYears : [demoYear]
+    const min = Math.min(demoYear - 5, view.year, ...known)
+    const max = Math.max(demoYear + 5, view.year, ...known)
+    return Array.from({ length: max - min + 1 }, (_, index) => min + index)
+  }, [marks, view.year])
 
   useEffect(() => {
     const root = agendaRef.current
-    const node = root?.querySelector<HTMLElement>(`[data-date="${selected}"]`)
-    if (!root || !node) return
+    if (!root) return
+    const node = root.querySelector<HTMLElement>(`[data-date="${selected}"]`)
+    if (!node) {
+      root.scrollTo({ top: 0 })
+      return
+    }
     root.scrollTo({ top: Math.max(0, node.offsetTop - 8) })
-  }, [selected])
+  }, [selected, agenda])
+
+  function showMonth(year: number, monthNumber: number) {
+    setView(current => ({ year, month: monthNumber, day: current.day }))
+  }
+
+  function stepMonth(delta: number) {
+    const next = new Date(Date.UTC(view.year, view.month - 1 + delta, 1))
+    showMonth(next.getUTCFullYear(), next.getUTCMonth() + 1)
+  }
 
   return (
     <section className="section-block" aria-labelledby="desk-calendar">
@@ -57,7 +115,34 @@ export default function DeskCalendar({
       <div className="cal-card">
         <div className="cal-left">
           <div className="cal-month">
-            <h3 className="cal-month-label">{month.label}</h3>
+            <div className="cal-nav">
+              <button type="button" className="cal-nav-btn" aria-label="Previous month" onClick={() => stepMonth(-1)}>
+                <LeftOutlined aria-hidden />
+              </button>
+              <select
+                className="cal-nav-month"
+                aria-label="Month"
+                value={view.month}
+                onChange={event => showMonth(view.year, Number(event.target.value))}
+              >
+                {monthNames.map((name, index) => (
+                  <option key={name} value={index + 1}>{name}</option>
+                ))}
+              </select>
+              <select
+                className="cal-nav-year"
+                aria-label="Year"
+                value={view.year}
+                onChange={event => showMonth(Number(event.target.value), view.month)}
+              >
+                {years.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <button type="button" className="cal-nav-btn" aria-label="Next month" onClick={() => stepMonth(1)}>
+                <RightOutlined aria-hidden />
+              </button>
+            </div>
             <div className="cal-grid" role="grid" aria-label={month.label}>
               {weekdays.map((label, index) => (
                 <span key={`dow-${index}`} className="cal-dow" aria-hidden="true">{label}</span>
@@ -66,7 +151,8 @@ export default function DeskCalendar({
                 if (!date) {
                   return <span key={`empty-${index}`} className="cal-day is-empty" />
                 }
-                const count = marksOn(marks, date).length
+                const dayMarksForCell = marksOn(marks, date)
+                const kinds = kindOrder.filter(kind => dayMarksForCell.some(mark => mark.kind === kind))
                 const dayNumber = Number(date.slice(8))
                 return (
                   <button
@@ -79,11 +165,15 @@ export default function DeskCalendar({
                       date === selected ? 'is-selected' : '',
                     ].filter(Boolean).join(' ')}
                     aria-pressed={date === selected}
-                    aria-label={`${month.label} ${dayNumber}, ${count === 0 ? 'nothing recorded' : `${count} recorded`}`}
-                    onClick={() => setSelected(date)}
+                    aria-label={`${month.label} ${dayNumber}, ${dayMarksForCell.length === 0 ? 'nothing recorded' : `${dayMarksForCell.length} recorded`}`}
+                    onClick={() => setView(current => ({ ...current, day: dayNumber }))}
                   >
                     <span className="cal-num">{dayNumber}</span>
-                    {dates.has(date) ? <span className="cal-dot" aria-hidden="true" /> : <span className="cal-dot is-off" aria-hidden="true" />}
+                    <span className="cal-dots" aria-hidden="true">
+                      {kinds.length === 0
+                        ? <span className="cal-dot is-off" />
+                        : kinds.map(kind => <span key={kind} className={`cal-dot kind-${kind}`} />)}
+                    </span>
                   </button>
                 )
               })}
@@ -96,10 +186,8 @@ export default function DeskCalendar({
             ) : (
               <ul>
                 {dayMarks.map((mark, index) => (
-                  <li key={`${mark.invoiceId}-${mark.title}-${index}`}>
-                    <button type="button" className="cal-item" onClick={() => onOpen(mark.invoiceId)}>
-                      {calendarSummary(mark)}
-                    </button>
+                  <li key={`${mark.invoiceId}-${mark.kind}-${mark.title}-${index}`}>
+                    <CalendarEntry mark={mark} onOpen={onOpen} />
                   </li>
                 ))}
               </ul>
@@ -119,10 +207,8 @@ export default function DeskCalendar({
                 <h3 className="cal-agenda-heading">{formatDay(group.date)}</h3>
                 <ul>
                   {group.marks.map((mark, index) => (
-                    <li key={`${mark.invoiceId}-${mark.title}-${index}`}>
-                      <button type="button" className="cal-item" onClick={() => onOpen(mark.invoiceId)}>
-                        {calendarSummary(mark)}
-                      </button>
+                    <li key={`${mark.invoiceId}-${mark.kind}-${mark.title}-${index}`}>
+                      <CalendarEntry mark={mark} onOpen={onOpen} />
                     </li>
                   ))}
                 </ul>

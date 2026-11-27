@@ -1,6 +1,8 @@
 import { activityTimeline } from './activity.ts'
 import { demoDay, type Invoice } from './model.ts'
 
+export type CalendarMarkKind = 'due' | 'promise' | 'payment' | 'activity'
+
 export type CalendarMark = {
   date: string
   invoiceId: string
@@ -8,6 +10,7 @@ export type CalendarMark = {
   customer: string
   title: string
   detail: string
+  kind: CalendarMarkKind
 }
 
 export type CalendarMonth = {
@@ -26,10 +29,24 @@ const monthNames = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const
 
-function markKind(title: string): number {
-  if (title === 'Invoice due') return 0
-  if (title === 'Promise due') return 1
-  return 2
+const kindRank: Record<CalendarMarkKind, number> = {
+  due: 0,
+  promise: 1,
+  payment: 2,
+  activity: 3,
+}
+
+function markKind(title: string): CalendarMarkKind {
+  switch (title) {
+    case 'Invoice due':
+      return 'due'
+    case 'Promise due':
+      return 'promise'
+    case 'Payment received':
+      return 'payment'
+    default:
+      return 'activity'
+  }
 }
 
 /** Activity, plus the invoice due date and the promise date when one is on file. */
@@ -44,6 +61,7 @@ export function calendarMarks(invoices: Invoice[]): CalendarMark[] {
         customer: invoice.customer,
         title: entry.title,
         detail: entry.detail,
+        kind: markKind(entry.title),
       })
     }
     marks.push({
@@ -53,6 +71,7 @@ export function calendarMarks(invoices: Invoice[]): CalendarMark[] {
       customer: invoice.customer,
       title: 'Invoice due',
       detail: '',
+      kind: 'due',
     })
     if (invoice.promise) {
       marks.push({
@@ -62,12 +81,13 @@ export function calendarMarks(invoices: Invoice[]): CalendarMark[] {
         customer: invoice.customer,
         title: 'Promise due',
         detail: invoice.promise.note,
+        kind: 'promise',
       })
     }
   }
   return marks.sort((a, b) =>
     a.date.localeCompare(b.date)
-    || markKind(a.title) - markKind(b.title)
+    || kindRank[a.kind] - kindRank[b.kind]
     || a.code.localeCompare(b.code)
     || a.title.localeCompare(b.title),
   )

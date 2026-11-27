@@ -120,8 +120,9 @@ export default function GuidePage() {
       <section className="brief-section" aria-labelledby="brief-calendar">
         <h2 id="brief-calendar">Calendar</h2>
         <ul className="brief-points">
-          <li>One month, the current month, on the left.</li>
-          <li>The list on the right is that month, grouped by day: invoice due dates, promise dates, and activity.</li>
+          <li>Pick any month and year. The grid and the list both follow that month.</li>
+          <li>Each item shows the invoice, then the record type, then that record’s detail.</li>
+          <li>Activity is gray. Invoice due, promise, and payment each have their own quiet color, on the dot and on the type.</li>
           <li>Click a date for that day’s summary under the calendar.</li>
         </ul>
       </section>
