@@ -8,7 +8,7 @@ Three slots. P0 first, in order: broken promise with no open dispute, never cont
 
 A follow-up does not remove an invoice. Priority does, and only from Next up. Brook’s first contact drops “never contacted,” so Brook leaves P0 and becomes P1. On the seed, Aster takes the open slot. Brook stays in the queue until it is paid or resolved. A follow-up on Dune leaves the broken promise in place, so Dune stays first.
 
-Inside P0 the fixed order above wins. After that, a larger remaining balance wins, then more days overdue. The queue uses that same order.
+Inside P0 the fixed order above wins. After that, a larger unpaid amount wins, then more days overdue. The queue uses that same order. The invoice shows Paid of its total, not a Remaining column.
 
 ## Tiers, not a score
 
@@ -18,7 +18,7 @@ P0–P3 come from the enums on the invoice. The first matching rule wins. There 
 
 Status is a label, separate from the tier. First match: Paid, Resolved, Disputed, Broken, Promised, Partial, Needs check, Open. A partial does not, by itself, change the tier.
 
-On an active invoice the drawer always allows follow-up, one promise, one dispute, record payment, and resolve without payment. The others stay on screen, disabled, with the reason. The server enforces the same list.
+On an active invoice the drawer always allows follow-up, one promise, one dispute, record payment, resolve without payment, and route to the account manager. The others stay on screen, disabled, with the reason. The server enforces the same list.
 
 | Invoice | Also legal |
 | --- | --- |
@@ -26,8 +26,8 @@ On an active invoice the drawer always allows follow-up, one promise, one disput
 | Dune, broken promise | Cancel the promise |
 | Crest, promise still ahead | Cancel the promise |
 | Grove, details unverified | Confirm or cancel the details request |
-| Aster, open dispute | Cancel the dispute, route to account manager |
-| Paid or resolved | None |
+| Aster, open dispute | Cancel the dispute |
+| Paid or resolved | None. The always-on actions are off too |
 
 A follow-up is a contact note. It does not set or clear the details flag. One details request, one promise, and one dispute: flag or create when none is open, then update or cancel. A dispute can be opened on a broken promise; the promise stays. See [ADR-0004](adr/0004-action-lifecycle.md).
 

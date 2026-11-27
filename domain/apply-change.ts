@@ -92,7 +92,7 @@ export function applyChange(invoices: Invoice[], key: string, change: Change) {
       const amount = change.value.amount
       const left = remaining(invoice)
       if (!Number.isFinite(amount) || amount <= 0) errors.amount = 'Enter a payment greater than zero.'
-      else if (amount > left) errors.amount = `Amount cannot exceed Remaining (${left}).`
+      else if (amount > left) errors.amount = `Amount cannot exceed what is still unpaid (${left} of ${invoice.amount}).`
       if (!note) errors.note = 'Add a short payment note.'
       next = {
         ...invoice,

@@ -21,7 +21,7 @@ const statusLabels: Record<StatusKind, string> = {
   promised: 'Promised',
   broken: 'Broken',
   disputed: 'Disputed',
-  unverified: 'Needs verification',
+  unverified: 'Needs check',
   partial: 'Partial',
   paid: 'Paid',
   resolved: 'Resolved',
