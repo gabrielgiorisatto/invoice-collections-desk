@@ -16,12 +16,23 @@ export type CalendarMonth = {
   weeks: (string | null)[][]
 }
 
+export type CalendarDayGroup = {
+  date: string
+  marks: CalendarMark[]
+}
+
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ] as const
 
-/** Every activity record, newest data first within a day. Not limited to due, promise, payment, or follow-up. */
+function markKind(title: string): number {
+  if (title === 'Invoice due') return 0
+  if (title === 'Promise due') return 1
+  return 2
+}
+
+/** Activity, plus the invoice due date and the promise date when one is on file. */
 export function calendarMarks(invoices: Invoice[]): CalendarMark[] {
   const marks: CalendarMark[] = []
   for (const invoice of invoices) {
@@ -35,9 +46,28 @@ export function calendarMarks(invoices: Invoice[]): CalendarMark[] {
         detail: entry.detail,
       })
     }
+    marks.push({
+      date: invoice.dueDate.slice(0, 10),
+      invoiceId: invoice.id,
+      code: invoice.code,
+      customer: invoice.customer,
+      title: 'Invoice due',
+      detail: '',
+    })
+    if (invoice.promise) {
+      marks.push({
+        date: invoice.promise.dueDate.slice(0, 10),
+        invoiceId: invoice.id,
+        code: invoice.code,
+        customer: invoice.customer,
+        title: 'Promise due',
+        detail: invoice.promise.note,
+      })
+    }
   }
   return marks.sort((a, b) =>
     a.date.localeCompare(b.date)
+    || markKind(a.title) - markKind(b.title)
     || a.code.localeCompare(b.code)
     || a.title.localeCompare(b.title),
   )
@@ -55,12 +85,23 @@ export function calendarSummary(mark: CalendarMark): string {
   return `${head} · ${short}`
 }
 
-/** Last month, this month, and next month around the demo day. Weeks start Sunday. */
-export function calendarMonths(anchor = demoDay): CalendarMonth[] {
+/** The month that contains the anchor day. Weeks start Sunday. */
+export function calendarMonth(anchor = demoDay): CalendarMonth {
   const [yearText, monthText] = anchor.split('-')
-  const year = Number(yearText)
-  const month = Number(monthText)
-  return [-1, 0, 1].map(offset => buildMonth(year, month - 1 + offset))
+  return buildMonth(Number(yearText), Number(monthText) - 1)
+}
+
+/** This month’s marks, grouped by day, days in order. */
+export function monthAgenda(invoices: Invoice[], anchor = demoDay): CalendarDayGroup[] {
+  const prefix = `${calendarMonth(anchor).key}-`
+  const groups: CalendarDayGroup[] = []
+  for (const mark of calendarMarks(invoices)) {
+    if (!mark.date.startsWith(prefix)) continue
+    const last = groups.at(-1)
+    if (last && last.date === mark.date) last.marks.push(mark)
+    else groups.push({ date: mark.date, marks: [mark] })
+  }
+  return groups
 }
 
 function buildMonth(year: number, monthIndex: number): CalendarMonth {

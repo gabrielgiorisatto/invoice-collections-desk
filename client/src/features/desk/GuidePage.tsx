@@ -120,9 +120,9 @@ export default function GuidePage() {
       <section className="brief-section" aria-labelledby="brief-calendar">
         <h2 id="brief-calendar">Calendar</h2>
         <ul className="brief-points">
-          <li>Three months: last, this, and next.</li>
-          <li>A dot is any recorded activity, not only a due date, promise, payment, or follow-up.</li>
-          <li>Click a day for a short summary of what happened.</li>
+          <li>One month, the current month, on the left.</li>
+          <li>The list on the right is that month, grouped by day: invoice due dates, promise dates, and activity.</li>
+          <li>Click a date for that day’s summary under the calendar.</li>
         </ul>
       </section>
 
