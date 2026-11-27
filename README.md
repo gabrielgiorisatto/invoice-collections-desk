@@ -1,3 +1,6 @@
+
+https://github.com/user-attachments/assets/3ee8dcb4-e59f-43d3-ade8-592eed213f12
+
 # Invoice Collections Desk
 
 Morning desk for one finance operator: about half an hour, and three invoices worth opening.
