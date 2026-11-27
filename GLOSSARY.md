@@ -45,7 +45,7 @@ Who owns the next action: `operator` (finance operator) or `account_manager` (si
 _Avoid_: Assignee, owner (alone)
 
 **ActionKind**:
-Operator verbs that change invoice state and append history: follow-up (contact note only, always available on an active invoice), flag / confirm / cancel the one details request, create / update / cancel the one promise, record payment, open / update / cancel the one dispute, route to account manager (its own action, not a follow-up), or **Resolve** without payment. Payment and resolve are always available together on an active invoice. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
+Operator verbs that change invoice state and append history: follow-up (contact note only, always available on an active invoice; the invoice stays in the queue and leaves **Next up** only if priority changes), flag / confirm / cancel the one details request, create / update / cancel the one promise, record payment, open / update / cancel the one dispute (including after a broken promise), route to account manager on any active invoice (labeled simulation, its own action, not a follow-up), or **Resolve** without payment. Payment, resolve, and route to account manager are always available together on an active invoice. Availability is state-gated by `availableActions` (see ADR-0004); paid/resolved invoices have none.
 _Avoid_: Event, mutation, update
 
 ### Morning focus
@@ -63,7 +63,7 @@ Domain name for the auto-picked morning set: fill from priority tier **P0** firs
 _Avoid_: Recommendations, AI picks, scoreboard
 
 **Follow-up slot**:
-One of the **MorningCapacity** morning slots consumed only by morning follow-up work in **Next up**. Recording **payment received** or **Resolve** does **not** consume a slot.
+One of the **MorningCapacity** places in **Next up**. Logging a follow-up does not remove the **Invoice** from the queue. The invoice leaves **Next up** when its priority changes. Recording **payment received** or **Resolve** does not fill a slot; those leave the queue.
 _Avoid_: Intervention slot (activation workbench term), weekly capacity
 
 ### Metric

@@ -67,7 +67,7 @@ export const actionCatalog: Record<ActionKind, ActionCopy> = {
   payment: {
     label: 'Record payment',
     hint: 'Attest cash (full or partial).',
-    purpose: 'Record cash against remaining balance. Paying in full leaves the queue.',
+    purpose: 'Record cash. The invoice shows Paid of its total. Paying in full leaves the queue.',
     confirm: 'Save payment',
   },
   dispute: {

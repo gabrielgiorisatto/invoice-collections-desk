@@ -78,7 +78,7 @@ export function promiseStateValue(invoice: Invoice): string {
   const status = promiseStatus(invoice)
   switch (status) {
     case 'none':
-      return 'None'
+      return '—'
     case 'active':
       return `Active due ${invoice.promise!.dueDate}`
     case 'broken':
@@ -94,11 +94,11 @@ export function disputeStateValue(invoice: Invoice): string {
   const status = disputeStatus(invoice)
   switch (status) {
     case 'none':
-      return 'None'
+      return '—'
     case 'open':
       return 'Open'
     case 'resolved':
-      return 'Resolved'
+      return 'Closed'
     default: {
       const _exhaustive: never = status
       return _exhaustive
@@ -112,7 +112,7 @@ export function detailsStateValue(invoice: Invoice): string {
     case 'ok':
       return 'Verified'
     case 'unverified_claim':
-      return 'Needs verification'
+      return 'Needs check'
     default: {
       const _exhaustive: never = value
       return _exhaustive

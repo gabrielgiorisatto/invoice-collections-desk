@@ -11,7 +11,7 @@ const dashboard = [
 
 const nextUp = [
   'Three invoices for this morning.',
-  'High first: broken promise, then never contacted, then Needs check.',
+  'High first: broken promise with no open dispute, then never contacted, then Needs check.',
   'Med fills a slot when fewer than three are High. Low waits.',
   'An open dispute is Med, even when the promise is broken.',
   'Each card shows the same Status as the queue column.',
@@ -25,12 +25,12 @@ const statuses: { label: string; tone: GlanceTone; detail: string }[] = [
   { label: 'Disputed', tone: 'caution', detail: 'Dispute is open.' },
   { label: 'Needs check', tone: 'attention', detail: 'Details are not verified.' },
   { label: 'Partial', tone: 'wait', detail: 'Some cash recorded. Still in the queue.' },
-  { label: 'Paid', tone: 'ok', detail: 'Remaining is zero. Turn on Show paid.' },
+  { label: 'Paid', tone: 'ok', detail: 'Paid matches the invoice total. Turn on Show paid.' },
   { label: 'Resolved', tone: 'neutral', detail: 'Closed with Resolve without payment. Turn on Show paid.' },
 ]
 
 const priorities: { tier: PriorityTier; detail: string }[] = [
-  { tier: 'P0', detail: 'Broken promise, no contact yet, or Needs check.' },
+  { tier: 'P0', detail: 'Broken promise with no open dispute, no contact yet, or Needs check.' },
   { tier: 'P1', detail: 'Open dispute, or follow-ups with no answer.' },
   { tier: 'P2', detail: 'Active promise. Wait.' },
   { tier: 'P3', detail: 'Paid or resolved.' },
@@ -48,9 +48,9 @@ const columns = [
 ] as const
 
 const invoiceFields = [
-  { term: 'Paid', detail: 'Cash recorded, of the invoice amount.' },
+  { term: 'Paid', detail: 'Cash recorded, of the invoice total.' },
   { term: 'Due', detail: 'The due date.' },
-  { term: 'Promise', detail: 'Active, Broken, or —.' },
+  { term: 'Promise', detail: 'Active, with the date. Broken, or —.' },
   { term: 'Dispute', detail: 'Open, Closed, or —.' },
   { term: 'Details', detail: 'Verified, or Needs check.' },
 ] as const
@@ -59,7 +59,7 @@ const actionGroups = [
   {
     label: 'Contact',
     actions: [
-      { term: 'Record follow-up', detail: 'In the queue. A contact note only.' },
+      { term: 'Record follow-up', detail: 'Contact note. Stays in the queue. Activity shows Answered or Unanswered.' },
     ],
   },
   {
@@ -67,7 +67,7 @@ const actionGroups = [
     actions: [
       { term: 'Flag details for review', detail: 'When no request is open.' },
       { term: 'Confirm details verified', detail: 'When a request is open.' },
-      { term: 'Cancel details request', detail: 'When a request is open. Leaves it unverified.' },
+      { term: 'Cancel details request', detail: 'When a request is open. Leaves it as Needs check.' },
     ],
   },
   {
@@ -89,7 +89,7 @@ const actionGroups = [
   {
     label: 'Payment and resolve',
     actions: [
-      { term: 'Record payment', detail: 'In the queue. A full payment leaves the queue and raises Paid total.' },
+      { term: 'Record payment', detail: 'Full or partial. Shows as Paid of the total. Paying in full leaves the queue.' },
       { term: 'Resolve without payment', detail: 'In the queue. Leaves the queue. Paid total stays the same.' },
     ],
   },
